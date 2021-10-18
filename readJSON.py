@@ -1,7 +1,28 @@
 import json
 import logging
+import sqlite3
+import threading
 
 ITEM_TYPE_WEAPON = 3
+
+
+# run queries for each perk column on an individual thread to speed up the process
+class ColumnThread(threading.Thread):
+    def __init__(self, thread_id, name, column, out):
+        threading.Thread.__init__(self)
+        self.thread_id = thread_id
+        self.name = name
+        self.column = column
+        self.out = out
+
+    def run(self):
+        logging.info(f"Starting {self.name}")
+        con = sqlite3.connect('Manifest.content')
+        col = process_perks_multithread(self.column, con)
+        con.close()
+        # acts as a "return value"
+        self.out[self.thread_id-1] = col
+        logging.info(f"Exiting {self.name}")
 
 
 # generate dictionary from db-json
@@ -67,21 +88,36 @@ async def process_plugs(socket_sets):
     return await process_perks(total_perk_hashes)
 
 
-# retrieve each perk
-async def process_perks(perk_hashes):
+# called upon by each ColumnThread
+def process_perks_multithread(column, con):
     from readDB import query_perk
+    col = []
+
+    for perk in column:
+        db_output = query_perk(perk, con)
+        col.append(deserialize(db_output)['displayProperties']['name'])
+
+    return col
+
+
+# handle multithreaded db lookup for weapon-perks
+async def process_perks(perk_hashes):
     total_perks = []
-    tasks = []
 
+    i = 0
+    threads = []
+    # create new thread for each perk row
     for column in perk_hashes:
-        col = []
+        i += 1
+        total_perks.append(None)
+        threads.append(ColumnThread(i, f"Thread_{i}", column, total_perks))
 
-        for perk in column:
-            db_output = await query_perk(perk)
-            col.append(deserialize(db_output)['displayProperties']['name'])
+    # execute the threads
+    for thread in threads:
+        thread.start()
 
-        total_perks.append(col)
+    for thread in threads:
+        thread.join()
 
-    for i in total_perks:
-        print(i)
     return total_perks
+

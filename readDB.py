@@ -57,8 +57,7 @@ def query_plug_set(plug_hash):
 
 
 # connect to Manifest.content and query the perk with the given hash
-async def query_perk(perk_hash):
-    con = sqlite3.connect('Manifest.content')
+def query_perk(perk_hash, con):
     cur = con.cursor()
     try:
         cur.execute("""
@@ -74,7 +73,6 @@ async def query_perk(perk_hash):
     perk = cur.fetchone()
     if len(perk) == 0:
         logging.warning(f'"{perk_hash}" query did not yield db result')
-    con.close()
 
     return perk[0]
 
