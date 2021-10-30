@@ -1,3 +1,6 @@
+<h1>Rahool Bot</h1>
+
+
 A Discord bot using Bungie's API to find possible perks for specific weapons.
 
 The development is an ongoing side project so expect increases in performance and more features as time goes on.
