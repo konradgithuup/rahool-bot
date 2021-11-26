@@ -40,7 +40,7 @@ def process_weapon(weapon_db):
     weapon_dict = deserialize(weapon[0])
 
     if weapon_dict['itemType'] != ITEM_TYPE_WEAPON:
-        weapon_db.remove(0)
+        weapon_db.pop(0)
         return process_weapon(weapon_db)
 
     return weapon_dict
