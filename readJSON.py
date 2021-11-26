@@ -43,7 +43,12 @@ def process_weapon(weapon_db):
         weapon_db.pop(0)
         return process_weapon(weapon_db)
 
-    return weapon_dict
+    for socket in weapon_dict["sockets"]["socketEntries"]:
+        if 'randomizedPlugSetHash' in socket:
+            return weapon_dict
+
+    weapon_db.pop(0)
+    return process_weapon(weapon_db)
 
 
 # prepare the weapon dictionary to get plug hashes

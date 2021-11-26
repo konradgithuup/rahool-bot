@@ -1,18 +1,20 @@
 import discord
 import logging
 import os
+from dislash import slash_commands
+from dislash.interactions import *
 from discord.ext import commands, tasks
 from readDB import query_weapon
 from readJSON import prepare_weapon
 from APIrequests import check_update
 
-# TODO: hide token
 BOT_PFP = 'https://cdn.discordapp.com/app-icons/725485079438032916/8cfe42f2a6930a82300aba44ef390306.png?size=512'
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 rahool = commands.Bot(
     command_prefix='e/',
     help_command=None)
+slash = slash_commands.SlashClient(client=rahool)
 
 logging.basicConfig(level=logging.INFO,
                     format='%(levelname)s|%(module)s|%(funcName)s|%(message)s|%(asctime)s',
@@ -50,8 +52,10 @@ async def update_loop():
 
 
 # override help function
-@rahool.command()
-async def help(ctx):
+@slash.command(
+    description="provide syntax help"
+)
+async def help(inter: SlashInteraction):
     form = discord.Embed(
         title='Help',
         description='Get information on possible weapon perk rolls',
@@ -67,12 +71,14 @@ async def help(ctx):
     form.set_author(name='help',
                     icon_url=BOT_PFP)
 
-    await ctx.send(embed=form)
+    await inter.respond(embed=form)
 
 
 # get weapon random rolls
-@rahool.command()
-async def perks(ctx, weapon_name):
+@slash.command(
+    description="show a weapon's possible perks"
+)
+async def perks(inter: SlashInteraction, weapon_name):
     # retrieve weapon information
     weapon = query_weapon(weapon_name)
     # assemble discord form containing information on the requested weapon
@@ -100,7 +106,7 @@ async def perks(ctx, weapon_name):
         form.add_field(name=f'column {i}', value=perk_string, inline=True)
         i += 1
 
-    await ctx.send(embed=form)
+    await inter.respond(embed=form)
 
 
 @perks.error
