@@ -98,7 +98,7 @@ async def perks(inter, weapon_name: str):
         form.add_field(name=f'column {i}', value=perk_string, inline=True)
         i += 1
 
-    await inter.edit_original_message(embed=form)
+    await inter.edit_original_message(content=None, embed=form)
 
 
 @perks.error
