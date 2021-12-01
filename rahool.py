@@ -70,6 +70,7 @@ async def help(inter):
 # get weapon random rolls
 @rahool.slash_command(description="show a weapon's possible perks")
 async def perks(inter, weapon_name: str):
+    await inter.response.send_message("processing your request...")
     # retrieve weapon information
     weapon = query_weapon(weapon_name)
     # assemble discord form containing information on the requested weapon
@@ -97,7 +98,7 @@ async def perks(inter, weapon_name: str):
         form.add_field(name=f'column {i}', value=perk_string, inline=True)
         i += 1
 
-    await inter.response.send_message(embed=form)
+    await inter.edit_original_message(embed=form)
 
 
 @perks.error
