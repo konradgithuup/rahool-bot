@@ -17,7 +17,7 @@ class ColumnThread(threading.Thread):
 
     def run(self):
         logging.info(f"Starting {self.name}")
-        con = sqlite3.connect('Manifest.content')
+        con = sqlite3.connect('resources/Manifest.content')
         col = process_perks_multithread(self.column, con)
         con.close()
         # acts as a "return value"

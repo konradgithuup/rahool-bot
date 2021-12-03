@@ -7,11 +7,11 @@ from readJSON import process_weapon
 
 # connect to Manifest.content and query all items named item_name
 def query_weapon(item_name):
-    if not os.path.isfile(r'Manifest.content'):
+    if not os.path.isfile(r'resources/Manifest.content'):
         # call API GET request for the game-manifest
         get_manifest()
 
-    con = sqlite3.connect('Manifest.content')
+    con = sqlite3.connect('resources/Manifest.content')
     cur = con.cursor()
     try:
         cur.execute("""
@@ -35,7 +35,7 @@ def query_weapon(item_name):
 
 # connect to Manifest.content and query the plug set with the given hash
 def query_plug_set(plug_hash):
-    con = sqlite3.connect('Manifest.content')
+    con = sqlite3.connect('resources/Manifest.content')
     cur = con.cursor()
     try:
         cur.execute("""

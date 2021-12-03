@@ -31,22 +31,22 @@ def get_manifest():
     except requests.exceptions.RequestException as e:
         logging.error(f'request failed, reason {e}')
         raise
-    with open('MANZIP', 'wb') as zip:
+    with open('resources/MANZIP', 'wb') as zip:
         zip.write(r.content)
     logging.info('manifest downloaded')
 
     # Extract the file contents, rename extracted file
-    with zipfile.ZipFile('MANZIP') as zip:
+    with zipfile.ZipFile('resources/MANZIP') as zip:
         name = zip.namelist()
         zip.extractall()
 
-    os.rename(name[0], 'Manifest.content')
+    os.rename(name[0], 'resources/Manifest.content')
     logging.info('manifest ready')
 
 
 # TODO: implement function to check for manifest updates
 def check_update():
-    if not os.path.isfile(r'Manifest.content'):
+    if not os.path.isfile(r'resources/Manifest.content'):
         get_manifest()
         return
 
@@ -58,7 +58,7 @@ def check_update():
     md5_data = (manifest_info['Response']['mobileWorldContentPaths']['en']).split('_')
     new_md5 = md5_data[4].replace('.content', '')
 
-    manifest_md5_hash = open("manifest_md5.txt", 'r')
+    manifest_md5_hash = open("resources/manifest_md5.txt", 'r')
     old_hash = manifest_md5_hash.read()
     manifest_md5_hash.close()
 
@@ -66,13 +66,13 @@ def check_update():
 
     if not old_hash == new_md5:
         logging.info('md5 sums unequal; commence update')
-        manifest_md5_hash = open("manifest_md5.txt", "w")
+        manifest_md5_hash = open("resources/manifest_md5.txt", "w")
         manifest_md5_hash.write(new_md5)
         manifest_md5_hash.close()
         update_manifest()
 
 
 def update_manifest():
-    os.remove("Manifest.content")
+    os.remove("resources/Manifest.content")
     logging.info('old manifest removed')
     get_manifest()
