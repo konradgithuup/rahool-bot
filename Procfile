@@ -1,1 +1,1 @@
-worker: python rahool.py
+worker: python src/rahool.py
