@@ -2,11 +2,12 @@ import sqlite3
 import logging
 import os
 from APIrequests import get_manifest
-from readJSON import process_weapon
+from readJSON import find_weapon
+from helperClasses import Weapon
 
 
 # connect to Manifest.content and query all items named item_name
-def query_weapon(item_name):
+def query_weapon(item_name: str) -> Weapon:
     if not os.path.isfile(r'resources/Manifest.content'):
         # call API GET request for the game-manifest
         get_manifest()
@@ -25,16 +26,16 @@ def query_weapon(item_name):
         logging.error(f'"{item_name}" query caused {e}')
         raise
 
-    item_list = cur.fetchall()
+    item_list: list[list[str]] = cur.fetchall()
     if len(item_list) == 0:
         logging.warning(f'"{item_name}" query did not yield db result')
     con.close()
 
-    return process_weapon(item_list)
+    return find_weapon(item_list)
 
 
 # connect to Manifest.content and query the plug set with the given hash
-def query_plug_set(plug_hash):
+def query_plug_set(plug_hash: int) -> str:
     con = sqlite3.connect('resources/Manifest.content')
     cur = con.cursor()
     try:
@@ -48,7 +49,7 @@ def query_plug_set(plug_hash):
     except sqlite3.Error as e:
         logging.error(f'"{plug_hash}" query caused {e}')
         raise
-    plug_set = cur.fetchone()
+    plug_set: list[str] = cur.fetchone()
     if len(plug_set) == 0:
         logging.warning(f'"{plug_hash}" query did not yield db result')
     con.close()
@@ -57,7 +58,7 @@ def query_plug_set(plug_hash):
 
 
 # connect to Manifest.content and query the perk with the given hash
-def query_perk(perk_hash, con):
+def query_perk(perk_hash: str, con) -> str:
     cur = con.cursor()
     try:
         cur.execute("""
@@ -70,11 +71,8 @@ def query_perk(perk_hash, con):
     except sqlite3.Error as e:
         logging.error(f'"{perk_hash}" query caused {e}')
         raise
-    perk = cur.fetchone()
+    perk: list[str] = cur.fetchone()
     if len(perk) == 0:
         logging.warning(f'"{perk_hash}" query did not yield db result')
 
     return perk[0]
-
-
-# query_weapon('Astral Horizon')

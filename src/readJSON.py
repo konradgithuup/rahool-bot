@@ -1,7 +1,8 @@
-import json
 import logging
 import sqlite3
 import threading
+from helperClasses import Weapon, SocketSet, PlugSet, PerkSet
+from typing import Optional
 
 ITEM_TYPE_WEAPON = 3
 
@@ -10,112 +11,94 @@ ITEM_TYPE_WEAPON = 3
 class ColumnThread(threading.Thread):
     def __init__(self, thread_id, name, column, out):
         threading.Thread.__init__(self)
-        self.thread_id = thread_id
-        self.name = name
-        self.column = column
-        self.out = out
+        self.thread_id: int = thread_id
+        self.name: str = name
+        self.column: list[str] = column
+        self.out: list[PerkSet] = out
 
     def run(self):
         logging.info(f"Starting {self.name}")
         con = sqlite3.connect('resources/Manifest.content')
-        col = process_perks_multithread(self.column, con)
+        col: PerkSet = thread_function(self.column, con)
         con.close()
         # acts as a "return value"
         self.out[self.thread_id-1] = col
         logging.info(f"Exiting {self.name}")
 
 
-# generate dictionary from db-json
-def deserialize(db_output):
-    data_json = db_output
-    try:
-        return json.loads(data_json)
-    except json.JSONDecodeError as e:
-        logging.error(f'db output could not be parsed: {e}')
+# search database output for random rolled weapon
+def find_weapon(weapon_db: list[list[str]]) -> Weapon:
+    weapon_string: list[str] = weapon_db[0]
+    weapon: Weapon = Weapon(json_string=weapon_string[0])
 
-
-# convert weapon db entry into dictionary
-def process_weapon(weapon_db):
-    weapon = weapon_db[0]
-    weapon_dict = deserialize(weapon[0])
-
-    if weapon_dict['itemType'] != ITEM_TYPE_WEAPON:
+    if weapon.get_item_type() != ITEM_TYPE_WEAPON:
         weapon_db.pop(0)
-        return process_weapon(weapon_db)
+        return find_weapon(weapon_db)
 
-    for socket in weapon_dict["sockets"]["socketEntries"]:
-        if 'randomizedPlugSetHash' in socket:
-            return weapon_dict
+    if weapon.has_random_roll():
+        return weapon
 
     weapon_db.pop(0)
-    return process_weapon(weapon_db)
+    return find_weapon(weapon_db)
 
 
 # prepare the weapon dictionary to get plug hashes
-async def prepare_weapon(weapon_json):
+async def get_weapon_plug_hashes(weapon: Weapon) -> list[PerkSet]:
     from readDB import query_plug_set
-    socket_dict = weapon_json['sockets']
-    socket_sets = []
-    i = 1
+    perk_socket_set: SocketSet = SocketSet(weapon)
+    plug_sets: list[str] = []
+    i: int = 1
 
-    # get plug hash for all columns that store non-intrinsic weapon perks
-    while i in socket_dict['socketCategories'][1]['socketIndexes']:
-        # socket_sets.append(query_plug_set(socket_dict['socketEntries'][i]['randomizedPlugSetHash']))
+    # get plug hash for all columns that store randomized weapon perks
+    while i in perk_socket_set:
 
-        if 'randomizedPlugSetHash' not in socket_dict['socketEntries'][i]:
+        if perk_socket_set.is_random_socket(index=i):
             i += 1
             continue
 
-        plug_set = socket_dict['socketEntries'][i].get('randomizedPlugSetHash', 0)
-        socket_sets.append(query_plug_set(plug_set))
+        plug_set: int = perk_socket_set.get_plug_set_hash(index=i)
+        plug_sets.append(query_plug_set(plug_set))
         i += 1
 
-    return await process_plugs(socket_sets)
+    return await get_plug_set_perk_hashes(plug_sets)
 
 
 # retrieve each plug sets perks
-async def process_plugs(socket_sets):
+async def get_plug_set_perk_hashes(plug_sets: list[str]) -> list[PerkSet]:
     # store all perk hashes
-    total_perk_hashes = []
-    for plug in socket_sets:
-        # stores perk hashes from current column
-        column = []
-        plug = deserialize(plug)
-
+    total_perk_hashes: list[list[int]] = []
+    for plug_string in plug_sets:
+        plug: PlugSet = PlugSet(plug_string)
         # retrieve perk hashes of column i
-        for plug_item in plug['reusablePlugItems']:
-            if plug_item['currentlyCanRoll'] is True:
-                column.append(plug_item['plugItemHash'])
-        # print(column)
+        column: list[int] = plug.get_perk_hashes()
 
         total_perk_hashes.append(column)
 
-    return await process_perks(total_perk_hashes)
+    return await get_perks(total_perk_hashes)
 
 
 # called upon by each ColumnThread
-def process_perks_multithread(column, con):
+def thread_function(column: list[str], con) -> PerkSet:
     from readDB import query_perk
-    col = []
+    col: PerkSet = PerkSet()
 
     for perk in column:
-        db_output = query_perk(perk, con)
-        col.append(deserialize(db_output)['displayProperties']['name'])
+        col.add_perk(query_perk(perk, con))
 
     return col
 
 
 # handle multithreaded db lookup for weapon-perks
-async def process_perks(perk_hashes):
-    total_perks = []
+async def get_perks(perk_hashes: list[list[int]]) -> list[PerkSet]:
+    total_perks: list[Optional[PerkSet]] = []
 
-    i = 0
-    threads = []
+    i: int = 0
+    threads: list[ColumnThread] = []
     # create new thread for each perk row
     for column in perk_hashes:
         i += 1
         total_perks.append(None)
-        threads.append(ColumnThread(i, f"Thread_{i}", column, total_perks))
+        threads.append(ColumnThread(thread_id=i, name=f"Thread_{i}", column=column, out=total_perks))
 
     # execute the threads
     for thread in threads:
@@ -125,4 +108,3 @@ async def process_perks(perk_hashes):
         thread.join()
 
     return total_perks
-

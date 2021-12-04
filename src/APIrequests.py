@@ -1,17 +1,15 @@
 import requests
-import os
 import zipfile
 import logging
 import os
 
 
-# TODO: hide token
 HEADERS = {"X-API-Key": os.environ.get('BUNGIE_API_KEY')}
 BASE_URL = 'http://www.bungie.net/Platform/Destiny2/Manifest/'
 HALF_HOUR = 1800
 
 
-# get destiny 2 game manifest from bungie api
+# get destiny 2 game Manifest from the Bungie api
 def get_manifest():
     manifest_url = BASE_URL
 
@@ -22,8 +20,8 @@ def get_manifest():
         logging.error(f'request failed, reason {e}')
         raise
 
-    manifest = r.json()
-    mani_url = 'https://www.bungie.net' + manifest['Response']['mobileWorldContentPaths']['en']
+    manifest: dict = r.json()
+    mani_url: str = 'https://www.bungie.net' + manifest['Response']['mobileWorldContentPaths']['en']
 
     # Download file and write it to MANZIP
     try:
@@ -44,19 +42,19 @@ def get_manifest():
     logging.info('manifest ready')
 
 
-# TODO: implement function to check for manifest updates
+# checks if a more recent Manifest exists, calls update if needed
 def check_update():
     if not os.path.isfile(r'resources/Manifest.content'):
         get_manifest()
         return
 
-    manifest_url = BASE_URL
+    manifest_url: str = BASE_URL
 
     r = requests.get(manifest_url, headers=HEADERS)
-    manifest_info = r.json()
+    manifest_info: dict = r.json()
 
-    md5_data = (manifest_info['Response']['mobileWorldContentPaths']['en']).split('_')
-    new_md5 = md5_data[4].replace('.content', '')
+    md5_data: str = (manifest_info['Response']['mobileWorldContentPaths']['en']).split('_')
+    new_md5: str = md5_data[4].replace('.content', '')
 
     manifest_md5_hash = open("resources/manifest_md5.txt", 'r')
     old_hash = manifest_md5_hash.read()
@@ -72,6 +70,7 @@ def check_update():
         update_manifest()
 
 
+# updates the manifest
 def update_manifest():
     os.remove("resources/Manifest.content")
     logging.info('old manifest removed')
