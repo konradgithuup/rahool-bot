@@ -108,19 +108,14 @@ async def perks(inter, weapon_name: str):
 
 
 @perks.error
-async def perks_error(ctx, error):
+async def perks_error(inter, error):
     form = disnake.Embed(
         title='Error',
-        description='An error occurred using the perks command',
+        description='An error occurred using the perks command.\n'
+                    'See /help for more information',
         colour=disnake.Colour.red()
     )
 
-    if isinstance(error, commands.MissingRequiredArgument):
-        form.add_field(name="Missing Required Argument", value='When using the perks command you'
-                                                               'must provide the name of the weapon'
-                                                               'you are searching.\n'
-                                                               'Check help for more information.')
-
-    await ctx.send(embed=form)
+    await inter.response.send_message(content=None, embed=form)
 
 rahool.run(BOT_TOKEN)
