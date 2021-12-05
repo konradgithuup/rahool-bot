@@ -63,6 +63,9 @@ class SocketSet:
 
         return False
 
+    def get_perk_sockets(self):
+        return self.socket_set['socketCategories'][1]['socketIndexes'];
+
     def get_plug_set_hash(self, index: int) -> int:
         return self.socket_set['socketEntries'][index].get('randomizedPlugSetHash', 0)
 
@@ -101,7 +104,7 @@ class PerkIterator:
 
 
 class PerkSet(ManifestData):
-    perk_set: list[dict[str, str]]
+    perk_set: list[dict[str, Union[str, dict[str, str]]]]
 
     def __init__(self):
         self.perk_set = []
@@ -113,7 +116,7 @@ class PerkSet(ManifestData):
         return PerkIterator(self)
 
     def __getitem__(self, item):
-        return self.perk_set[item]
+        return self.perk_set[item]['displayProperties']['name']
 
     def add_perk(self, json_string):
         self.perk_set.append(self.deserialize(json_string))

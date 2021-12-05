@@ -4,6 +4,7 @@ import os
 from APIrequests import get_manifest
 from readJSON import find_weapon
 from helperClasses import Weapon
+from customExceptions import NoSuchWeaponError
 
 
 # connect to Manifest.content and query all items named item_name
@@ -24,11 +25,12 @@ def query_weapon(item_name: str) -> Weapon:
                     json_tree.key = 'name' AND UPPER(json_tree.value) LIKE UPPER(?)""", (item_name,))
     except sqlite3.Error as e:
         logging.error(f'"{item_name}" query caused {e}')
-        raise
+        raise IOError
 
     item_list: list[list[str]] = cur.fetchall()
     if len(item_list) == 0:
         logging.warning(f'"{item_name}" query did not yield db result')
+        raise NoSuchWeaponError
     con.close()
 
     return find_weapon(item_list)

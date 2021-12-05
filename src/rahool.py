@@ -6,6 +6,7 @@ from readDB import query_weapon
 from readJSON import get_weapon_plug_hashes
 from APIrequests import check_update
 from helperClasses import Weapon, PerkSet
+from customExceptions import NoSuchWeaponError, NoRandomRollsError
 
 BOT_PFP = 'https://cdn.discordapp.com/app-icons/725485079438032916/8cfe42f2a6930a82300aba44ef390306.png?size=512'
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
@@ -35,21 +36,22 @@ async def update_loop():
 @rahool.slash_command(description="command syntax help")
 async def help(inter):
     form = disnake.Embed(
-        title='Help',
-        description='Get information on possible weapon perk rolls',
+        title='Rahool/help',
+        url='https://discord.gg/7kvXr4zhY3',
+        description="Can't find what you are looking for?\nWant to suggest a feature or report a bug?\n"
+                    "Follow the link in the title to join the support discord server",
         colour=disnake.Colour.green()
     )
 
-    form.add_field(name='Syntax', value='e/perks <description>')
-    form.add_field(name='Examples', value='e/perks Gridskipper\n'
-                                          'weapon names with >1 word must be encased in "":\n'
-                                          'e/perks "Astral Horizon"')
+    form.add_field(name='Find Weapon Perks', value='/perks <weapon>')
+    form.add_field(name='Examples', value='/perks Gridskipper\n'
+                                          'e/perks Astral Horizon')
 
     form.set_footer(text='"Some of these files are older than the city itself..."')
     form.set_author(name='help',
                     icon_url=BOT_PFP)
 
-    await inter.inter.response.send_message(embed=form)
+    await inter.response.send_message(embed=form)
 
 
 # get weapon random rolls
@@ -58,7 +60,26 @@ async def perks(inter, weapon_name: str):
     # temporary response to satisfy discord's response time limit
     await inter.response.send_message("processing your request...")
 
-    weapon: Weapon = query_weapon(weapon_name)
+    try:
+        weapon: Weapon = query_weapon(weapon_name)
+    except NoSuchWeaponError:
+        error = disnake.Embed(
+            title="Error",
+            description="This weapon does not exist.\n"
+                        "Please check for typos or check /help",
+            colour=disnake.Colour.red()
+        )
+        await inter.edit_original_message(content=None, embed=error)
+        return
+    except NoRandomRollsError:
+        error = disnake.Embed(
+            title="Error",
+            description="This weapon does not have any random rolls\n"
+                        "/perks only works for weapons with random perks",
+            colour=disnake.Colour.red()
+        )
+        await inter.edit_original_message(content=None, embed=error)
+        return
 
     form = disnake.Embed(
         title=weapon.get_name(),

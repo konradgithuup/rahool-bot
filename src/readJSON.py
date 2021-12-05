@@ -2,6 +2,7 @@ import logging
 import sqlite3
 import threading
 from helperClasses import Weapon, SocketSet, PlugSet, PerkSet
+from customExceptions import NoRandomRollsError
 from typing import Optional
 
 ITEM_TYPE_WEAPON = 3
@@ -28,6 +29,9 @@ class ColumnThread(threading.Thread):
 
 # search database output for random rolled weapon
 def find_weapon(weapon_db: list[list[str]]) -> Weapon:
+    if len(weapon_db) == 0:
+        raise NoRandomRollsError
+
     weapon_string: list[str] = weapon_db[0]
     weapon: Weapon = Weapon(json_string=weapon_string[0])
 
@@ -48,9 +52,10 @@ async def get_weapon_plug_hashes(weapon: Weapon) -> list[PerkSet]:
     perk_socket_set: SocketSet = SocketSet(weapon)
     plug_sets: list[str] = []
     i: int = 1
+    perk_sockets = perk_socket_set.get_perk_sockets()
 
     # get plug hash for all columns that store randomized weapon perks
-    while i in perk_socket_set:
+    while i in perk_sockets:
 
         if perk_socket_set.is_random_socket(index=i):
             i += 1
