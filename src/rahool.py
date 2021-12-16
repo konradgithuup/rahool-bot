@@ -85,7 +85,7 @@ async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
     weapon_perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
     image = disnake.File(f'{create_perk_image(weapon, weapon_perks)}.png')
 
-    await inter.edit_original_message(file=image)
+    await inter.followup.send(file=image)
     os.remove(f'{weapon.get_collectible_hash()}.png')
 
 
