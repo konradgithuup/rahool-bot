@@ -26,11 +26,17 @@ class Weapon(ManifestData):
     def get_name(self) -> str:
         return self.weapon['displayProperties']['name']
 
+    def get_rarity(self) -> str:
+        return self.weapon['itemTypeAndTierDisplayName'].split(" ")[0]
+
+    def get_collectible_hash(self) -> str:
+        return self.weapon['collectibleHash']
+
     def get_hash(self) -> str:
         return self.weapon['hash']
 
-    def get_icon(self) -> str:
-        return self.weapon['displayProperties']['icon']
+    def get_screenshot(self) -> str:
+        return self.weapon['screenshot']
 
     def get_socket_set(self):
         return self.weapon['sockets']
