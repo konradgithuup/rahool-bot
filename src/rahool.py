@@ -59,7 +59,7 @@ async def help(inter):
 @rahool.slash_command(description="show a weapon's possible perks")
 async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
     # temporary response to satisfy discord's response time limit
-    await inter.response.send_message("processing your request...")
+    await inter.response.defer()
 
     try:
         weapon: Weapon = query_weapon(weapon_name)
@@ -70,7 +70,7 @@ async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
                         "Please check for typos or check /help",
             colour=disnake.Colour.red()
         )
-        await inter.edit_original_message(content=None, embed=error)
+        await inter.followup.send(content=None, embed=error)
         return
     except NoRandomRollsError:
         error = disnake.Embed(
@@ -79,24 +79,13 @@ async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
                         "/perks only works for weapons with random perks",
             colour=disnake.Colour.red()
         )
-        await inter.edit_original_message(content=None, embed=error)
+        await inter.followup.send(content=None, embed=error)
         return
 
-    form = disnake.Embed(
-        title=weapon.get_name(),
-        description=weapon.get_type(),
-        url=f'''https://data.destinysets.com/i/InventoryItem:{weapon.get_hash()}''',
-        colour=disnake.Colour.dark_gold()
-    )
     weapon_perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
+    image = disnake.File(f'{create_perk_image(weapon, weapon_perks)}.png')
 
-    form.set_image(file=disnake.File(f'{create_perk_image(weapon, weapon_perks)}.png'))
-
-    form.set_author(name=f'info',
-                    icon_url=BOT_PFP)
-    form.set_footer(text='"Some of these files are older than the city itself..."')
-
-    await inter.edit_original_message(content=None, embed=form)
+    await inter.followup.send(file=image)
     os.remove(f'{weapon.get_collectible_hash()}.png')
 
 
