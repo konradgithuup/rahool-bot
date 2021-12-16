@@ -57,7 +57,7 @@ async def help(inter):
 
 # get weapon random rolls
 @rahool.slash_command(description="show a weapon's possible perks")
-async def perks(inter, weapon_name: str = commands.Param(name="Weapon")):
+async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
     # temporary response to satisfy discord's response time limit
     await inter.response.send_message("processing your request...")
 
