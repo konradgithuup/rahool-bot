@@ -5,6 +5,7 @@ from disnake.ext import commands, tasks
 from readDB import query_weapon
 from readJSON import get_weapon_plug_hashes
 from APIrequests import check_update
+from createImages import create_perk_image
 from helperClasses import Weapon, PerkSet
 from customExceptions import NoSuchWeaponError, NoRandomRollsError
 
@@ -43,9 +44,9 @@ async def help(inter):
         colour=disnake.Colour.green()
     )
 
-    form.add_field(name='Find Weapon Perks', value='/perks <weapon>')
+    form.add_field(name='Shows all possible Weapon Perks', value='/perks <Weapon>')
     form.add_field(name='Examples', value='/perks Gridskipper\n'
-                                          'e/perks Astral Horizon')
+                                          '/perks Astral Horizon')
 
     form.set_footer(text='"Some of these files are older than the city itself..."')
     form.set_author(name='help',
@@ -56,7 +57,7 @@ async def help(inter):
 
 # get weapon random rolls
 @rahool.slash_command(description="show a weapon's possible perks")
-async def perks(inter, weapon_name: str):
+async def perks(inter, weapon_name: str = commands.Param(name="Weapon")):
     # temporary response to satisfy discord's response time limit
     await inter.response.send_message("processing your request...")
 
@@ -89,22 +90,14 @@ async def perks(inter, weapon_name: str):
     )
     weapon_perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
 
+    form.set_image(file=disnake.File(f'{create_perk_image(weapon, weapon_perks)}.png'))
+
     form.set_author(name=f'info',
                     icon_url=BOT_PFP)
     form.set_footer(text='"Some of these files are older than the city itself..."')
 
-    form.set_thumbnail(url=f'''https://bungie.net{weapon.get_icon()}''')
-    form.add_field(name='_____', value=f'''"{weapon.get_description()}"''', inline=False)
-
-    i = 1
-    for column in weapon_perks:
-        perk_string: str = ''
-        for perk in column:
-            perk_string += f'{perk}\n'
-        form.add_field(name=f'column {i}', value=perk_string, inline=True)
-        i += 1
-
     await inter.edit_original_message(content=None, embed=form)
+    os.remove(f'{weapon.get_collectible_hash()}.png')
 
 
 @perks.error

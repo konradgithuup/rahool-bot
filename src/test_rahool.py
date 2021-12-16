@@ -1,8 +1,12 @@
+import os
+
 import pytest
 from readDB import query_weapon
 from readJSON import get_weapon_plug_hashes
 from helperClasses import Weapon, PerkSet
 from customExceptions import NoSuchWeaponError, NoRandomRollsError
+from createImages import create_perk_image
+from PIL import Image
 
 
 def test_weapon_query():
@@ -42,3 +46,25 @@ async def test_perk_query_y1_weapon(event_loop):
 @pytest.mark.asyncio
 async def test_perk_query_exotic(event_loop):
     assert await get_first_perk("Hawkmoon") == "Arrowhead Brake"
+
+
+@pytest.mark.asyncio
+async def test_image_generation_legendary(event_loop):
+    weapon: Weapon = query_weapon("Shayura's Wrath")
+    perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
+
+    img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')
+    img.show()
+
+    os.remove(f'{weapon.get_collectible_hash()}.png')
+
+
+@pytest.mark.asyncio
+async def test_image_generation_exotic(event_loop):
+    weapon: Weapon = query_weapon("Hawkmoon")
+    perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
+
+    img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')
+    img.show()
+
+    os.remove(f'{weapon.get_collectible_hash()}.png')
