@@ -56,6 +56,7 @@ async def test_image_generation_legendary(event_loop):
     img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')
     img.show()
 
+    os.remove(f'{weapon.get_damage_type()}.png')
     os.remove(f'{weapon.get_collectible_hash()}.png')
 
 
@@ -67,4 +68,5 @@ async def test_image_generation_exotic(event_loop):
     img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')
     img.show()
 
+    os.remove(f'{weapon.get_damage_type()}.png')
     os.remove(f'{weapon.get_collectible_hash()}.png')

@@ -86,6 +86,7 @@ async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
     image = disnake.File(f'{create_perk_image(weapon, weapon_perks)}.png')
 
     await inter.followup.send(file=image)
+    os.remove(f'{weapon.get_damage_type()}.png')
     os.remove(f'{weapon.get_collectible_hash()}.png')
 
 
