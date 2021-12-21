@@ -1,7 +1,7 @@
 import logging
 import sqlite3
 import threading
-from helperClasses import Weapon, SocketSet, PlugSet, PerkSet
+from helperClasses import Weapon, SocketSet, PlugSet, PerkSet, DamageType
 from customExceptions import NoRandomRollsError
 from typing import Optional
 
@@ -44,6 +44,11 @@ def find_weapon(weapon_db: list[list[str]]) -> Weapon:
 
     weapon_db.pop(0)
     return find_weapon(weapon_db)
+
+
+def get_damage_type_link(dmg_type_string: str) -> str:
+    damage_type: DamageType = DamageType(dmg_type_string)
+    return damage_type.get_icon()
 
 
 # prepare the weapon dictionary to get plug hashes

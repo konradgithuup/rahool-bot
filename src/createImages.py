@@ -1,5 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
 from helperClasses import Weapon, PerkSet
+from readDB import query_damage_type
 import urllib.request
 
 COL_WIDTH: int = 500
@@ -9,8 +10,13 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
     # open/create required images
     urllib.request.urlretrieve(f'https://bungie.net{weapon.get_screenshot()}',
                                f'{weapon.get_collectible_hash()}.png')
+    urllib.request.urlretrieve(f'https://bungie.net{query_damage_type(weapon.get_damage_type())}',
+                               f'{weapon.get_damage_type()}.png')
 
     weapon_img = Image.open(f'{weapon.get_collectible_hash()}.png')
+    dmg_type_img = Image.open(f'{weapon.get_damage_type()}.png')
+    dmg_type_img = dmg_type_img.convert(mode='RGBA', palette=Image.ADAPTIVE, colors=32)
+    dmg_type_img = dmg_type_img.resize((100, 100))
     overlay = Image.new('RGBA', (1920, 1080), (0, 0, 0, 96))
     glow = Image.open(f'resources/image_assets/weapon_glow_{weapon.get_rarity()}.png')
 
@@ -22,7 +28,7 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
 
     # add text on overlay-layer
     overlay_edit = ImageDraw.Draw(overlay)
-    overlay_edit.text((15, 15),
+    overlay_edit.text((130, 15),
                       weapon.get_name(),
                       (255, 255, 255),
                       title)
@@ -51,6 +57,9 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
         n_cols += 1
 
     # composite all layers
+    enhance = ImageEnhance.Brightness(dmg_type_img)
+    mask = enhance.enhance(1)
+    overlay.paste(dmg_type_img, (15, 15), mask)
     enhance = ImageEnhance.Brightness(glow)
     mask = enhance.enhance(0.3)
     overlay.paste(glow, (0, 540), mask)

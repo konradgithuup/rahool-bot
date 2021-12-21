@@ -47,6 +47,9 @@ class Weapon(ManifestData):
     def get_description(self) -> str:
         return self.weapon['flavorText']
 
+    def get_damage_type(self) -> str:
+        return self.weapon['defaultDamageTypeHash']
+
     def has_random_roll(self) -> bool:
         for socket in self.weapon['sockets']['socketEntries']:
             if 'randomizedPlugSetHash' in socket:
@@ -126,3 +129,13 @@ class PerkSet(ManifestData):
 
     def add_perk(self, json_string):
         self.perk_set.append(self.deserialize(json_string))
+
+
+class DamageType(ManifestData):
+    damage_type: dict[Union[str, dict[str, str]], Union[dict[str, str], str]]
+
+    def __init__(self, json_string):
+        self.damage_type = self.deserialize(json_string=json_string)
+
+    def get_icon(self) -> str:
+        return self.damage_type['displayProperties']['icon']

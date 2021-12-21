@@ -2,7 +2,7 @@ import sqlite3
 import logging
 import os
 from APIrequests import get_manifest
-from readJSON import find_weapon
+from readJSON import find_weapon, get_damage_type_link
 from helperClasses import Weapon
 from customExceptions import NoSuchWeaponError
 
@@ -78,3 +78,26 @@ def query_perk(perk_hash: str, con) -> str:
         logging.warning(f'"{perk_hash}" query did not yield db result')
 
     return perk[0]
+
+
+def query_damage_type(dmg_hash: str) -> str:
+    con = sqlite3.connect('resources/Manifest.content')
+    cur = con.cursor()
+
+    try:
+        cur.execute("""
+                SELECT
+                    json_extract(DestinyDamageTypeDefinition.json, '$')
+                FROM
+                    DestinyDamageTypeDefinition, json_tree(DestinyDamageTypeDefinition.json, '$')
+                WHERE
+                    json_tree.key = 'hash' AND json_tree.value = ?""", (dmg_hash,))
+    except sqlite3.Error as e:
+        logging.error(f'"{dmg_hash}" query caused {e}')
+        raise IOError
+
+    dmg_type: list[str] = cur.fetchone()
+    if len(dmg_type) == 0:
+        logging.warning(f'"{dmg_hash}" did not yield db result')
+
+    return get_damage_type_link(dmg_type[0])
