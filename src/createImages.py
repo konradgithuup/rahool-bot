@@ -39,21 +39,40 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
 
     # add perks
     n_cols: int = 0
+    total_column_width: int = 20
     for column in perk_set:
         depth: int = 0
         perk_string: str = ''
+        icon_urls: list[str] = []
+        column_width: int = 0
         for perk in column:
-            perk_string += f'{perk}\n'
+            perk_string += f'{perk["name"]}\n'
+            icon_urls.append(perk['icon'])
+            perk_text_width = base_text.getbbox(text=perk['name'])[2]
+            if perk_text_width > column_width:
+                column_width = perk_text_width
             depth += 1
 
-        overlay_edit.line((35 + COL_WIDTH*n_cols, 230, 35 + COL_WIDTH*n_cols, 230 + depth*50),
+        overlay_edit.line((total_column_width, 230, total_column_width, 230 + depth*50),
                           width=5,
                           fill=255)
-        overlay_edit.multiline_text((45+COL_WIDTH*n_cols, 230),
+
+        overlay_edit.multiline_text((50+total_column_width, 230),
                                     spacing=20,
                                     text=perk_string,
                                     font=base_text,
                                     fill=(200, 200, 200))
+        for i in range(depth):
+            urllib.request.urlretrieve(f'https://bungie.net{icon_urls[i]}',
+                                       f'{weapon.get_collectible_hash()}_icon.png')
+            icon = Image.open(f'{weapon.get_collectible_hash()}_icon.png')
+            icon = icon.convert(mode='RGBA', palette=Image.ADAPTIVE, colors=32)
+            icon = icon.resize((40, 40))
+            enhance = ImageEnhance.Brightness(icon)
+            mask = enhance.enhance(1)
+            overlay.paste(icon, (5+total_column_width, 230 + i*52), mask)
+
+        total_column_width += 70 + column_width
         n_cols += 1
 
     # composite all layers
