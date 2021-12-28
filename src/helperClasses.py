@@ -125,7 +125,7 @@ class PerkSet(ManifestData):
         return PerkIterator(self)
 
     def __getitem__(self, item):
-        return self.perk_set[item]['displayProperties']['name']
+        return self.perk_set[item]['displayProperties']
 
     def add_perk(self, json_string):
         self.perk_set.append(self.deserialize(json_string))

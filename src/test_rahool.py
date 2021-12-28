@@ -1,4 +1,5 @@
 import os
+import time
 
 import pytest
 from readDB import query_weapon
@@ -18,7 +19,7 @@ async def get_first_perk(weapon_name: str) -> str:
     weapon_perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
     for col in weapon_perks:
         for perk in col:
-            return perk
+            return perk['name']
 
 
 @pytest.mark.asyncio
@@ -62,7 +63,7 @@ async def test_image_generation_legendary(event_loop):
 
 @pytest.mark.asyncio
 async def test_image_generation_exotic(event_loop):
-    weapon: Weapon = query_weapon("Hawkmoon")
+    weapon: Weapon = query_weapon("Bottom Dollar")
     perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
 
     img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')
