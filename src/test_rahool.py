@@ -1,5 +1,4 @@
 import os
-import time
 
 import pytest
 from readDB import query_weapon
@@ -24,12 +23,12 @@ async def get_first_perk(weapon_name: str) -> str:
 
 @pytest.mark.asyncio
 async def test_perk_query(event_loop):
-    assert await get_first_perk("Bottom Dollar") == "Arrowhead Brake"
+    assert await get_first_perk("Bottom Dollar") == "Hammer-Forged Rifling"
 
 
 @pytest.mark.asyncio
 async def test_perk_query_filter_y1_version(event_loop):
-    assert await get_first_perk("Shepherd's Watch") == "Arrowhead Brake"
+    assert await get_first_perk("Shepherd's Watch") == "Hammer-Forged Rifling"
 
 
 @pytest.mark.asyncio
@@ -46,7 +45,7 @@ async def test_perk_query_y1_weapon(event_loop):
 
 @pytest.mark.asyncio
 async def test_perk_query_exotic(event_loop):
-    assert await get_first_perk("Hawkmoon") == "Arrowhead Brake"
+    assert await get_first_perk("Hawkmoon") == "Hammer-Forged Rifling"
 
 
 @pytest.mark.asyncio
@@ -63,7 +62,7 @@ async def test_image_generation_legendary(event_loop):
 
 @pytest.mark.asyncio
 async def test_image_generation_exotic(event_loop):
-    weapon: Weapon = query_weapon("Bottom Dollar")
+    weapon: Weapon = query_weapon("Hawkmoon")
     perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
 
     img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')

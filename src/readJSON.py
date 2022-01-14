@@ -1,5 +1,4 @@
 import logging
-import sqlite3
 import threading
 from helperClasses import Weapon, SocketSet, PlugSet, PerkSet, DamageType
 from customExceptions import NoRandomRollsError
@@ -19,9 +18,7 @@ class ColumnThread(threading.Thread):
 
     def run(self):
         logging.info(f"Starting {self.name}")
-        con = sqlite3.connect('resources/Manifest.content')
-        col: PerkSet = thread_function(self.column, con)
-        con.close()
+        col: PerkSet = thread_function(self.column)
         # acts as a "return value"
         self.out[self.thread_id-1] = col
         logging.info(f"Exiting {self.name}")
@@ -88,12 +85,12 @@ async def get_plug_set_perk_hashes(plug_sets: list[str]) -> list[PerkSet]:
 
 
 # called upon by each ColumnThread
-def thread_function(column: list[str], con) -> PerkSet:
-    from readDB import query_perk
+def thread_function(column: list[str]) -> PerkSet:
+    from readDB import query_perks
     col: PerkSet = PerkSet()
-
-    for perk in column:
-        col.add_perk(query_perk(perk, con))
+    perks = query_perks(column)
+    for perk in perks:
+        col.add_perk(perk[0])
 
     return col
 
