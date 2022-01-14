@@ -1,3 +1,5 @@
+import os
+
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
 from helperClasses import Weapon, PerkSet
 from readDB import query_damage_type
@@ -87,5 +89,6 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
     weapon_img.paste(overlay, (0, 0), mask)
 
     weapon_img.save(f"{weapon.get_collectible_hash()}.png")
+    os.remove(f'{weapon.get_collectible_hash()}_icon.png')
 
     return weapon.get_collectible_hash()

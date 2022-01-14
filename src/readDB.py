@@ -60,7 +60,8 @@ def query_plug_set(plug_hash: int) -> str:
 
 
 # connect to Manifest.content and query the perk with the given hash
-def query_perk(perk_hash: str, con) -> str:
+def query_perks(perk_hashes: list[str]) -> list[str]:
+    con = sqlite3.connect('resources/Manifest.content')
     cur = con.cursor()
     try:
         cur.execute("""
@@ -69,15 +70,17 @@ def query_perk(perk_hash: str, con) -> str:
             FROM
                 DestinyInventoryItemDefinition, json_tree(DestinyInventoryItemDefinition.json, '$')
             WHERE
-                json_tree.key = 'hash' AND json_tree.value = ?""", (perk_hash,))
+                json_tree.key = 'hash' AND json_tree.value IN {}""".format(tuple(perk_hashes)))
     except sqlite3.Error as e:
-        logging.error(f'"{perk_hash}" query caused {e}')
+        logging.error(f'perk query caused {e}')
         raise
-    perk: list[str] = cur.fetchone()
-    if len(perk) == 0:
-        logging.warning(f'"{perk_hash}" query did not yield db result')
+    perks: list[str] = cur.fetchall()
+    con.close()
 
-    return perk[0]
+    if len(perks) == 0:
+        logging.warning(f'"perk query did not yield db result')
+
+    return perks
 
 
 def query_damage_type(dmg_hash: str) -> str:
