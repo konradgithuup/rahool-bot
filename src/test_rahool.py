@@ -49,20 +49,27 @@ async def test_perk_query_exotic(event_loop):
 
 
 @pytest.mark.asyncio
-async def test_image_generation_legendary(event_loop):
-    weapon: Weapon = query_weapon("Shayura's Wrath")
-    perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
+async def test_image_generation_legendary_no_origin(event_loop):
+    await weapon_image_gen("Bottom Dollar")
 
-    img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')
-    img.show()
 
-    os.remove(f'{weapon.get_damage_type()}.png')
-    os.remove(f'{weapon.get_collectible_hash()}.png')
+@pytest.mark.asyncio
+async def test_image_generation_legendary_single_origin(event_loop):
+    await weapon_image_gen("Thoughtless")
+
+
+@pytest.mark.asyncio
+async def test_image_generation_legendary_multiple_origin(event_loop):
+    await weapon_image_gen("Herod-C")
 
 
 @pytest.mark.asyncio
 async def test_image_generation_exotic(event_loop):
-    weapon: Weapon = query_weapon("Hawkmoon")
+    await weapon_image_gen("Hawkmoon")
+
+
+async def weapon_image_gen(weapon: str):
+    weapon: Weapon = query_weapon(weapon)
     perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
 
     img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')

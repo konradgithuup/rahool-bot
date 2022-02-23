@@ -18,7 +18,7 @@ class ColumnThread(threading.Thread):
 
     def run(self):
         logging.info(f"Starting {self.name}")
-        col: PerkSet = thread_function(self.column)
+        col: PerkSet = perk_set_from_hashes(self.column)
         # acts as a "return value"
         self.out[self.thread_id-1] = col
         logging.info(f"Exiting {self.name}")
@@ -57,14 +57,11 @@ async def get_weapon_plug_hashes(weapon: Weapon) -> list[PerkSet]:
     perk_sockets = perk_socket_set.get_perk_sockets()
 
     # get plug hash for all columns that store randomized weapon perks
-    while i in perk_sockets:
+    while i < perk_sockets[len(perk_sockets)-1]:
 
-        if perk_socket_set.is_random_socket(index=i):
-            i += 1
-            continue
-
-        plug_set: int = perk_socket_set.get_plug_set_hash(index=i)
-        plug_sets.append(query_plug_set(plug_set))
+        if perk_socket_set.is_random_socket(index=i) or perk_socket_set.is_origin_socket(index=i):
+            plug_set: int = perk_socket_set.get_plug_set_hash(index=i)
+            plug_sets.append(query_plug_set(plug_set))
         i += 1
 
     return await get_plug_set_perk_hashes(plug_sets)
@@ -85,7 +82,7 @@ async def get_plug_set_perk_hashes(plug_sets: list[str]) -> list[PerkSet]:
 
 
 # called upon by each ColumnThread
-def thread_function(column: list[str]) -> PerkSet:
+def perk_set_from_hashes(column: list[str]) -> PerkSet:
     from readDB import query_perks
     col: PerkSet = PerkSet()
     perks = query_perks(column)
