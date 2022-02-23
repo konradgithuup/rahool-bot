@@ -34,15 +34,17 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
                       weapon.get_name(),
                       (255, 255, 255),
                       title)
-    overlay_edit.text((15, 145),
-                      f'"{weapon.get_description()}"',
-                      (255, 255, 255),
-                      base_text)
 
     # add perks
     n_cols: int = 0
-    total_column_width: int = 20
+    perk_block_x: int = 20
+    perk_block_y: int = 150
+    col_count = 0
     for column in perk_set:
+        if col_count > 3:
+            perk_block_y = 870
+            perk_block_x = 250
+        col_count += 1
         depth: int = 0
         perk_string: str = ''
         icon_urls: list[str] = []
@@ -55,15 +57,16 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
                 column_width = perk_text_width
             depth += 1
 
-        overlay_edit.line((total_column_width, 230, total_column_width, 230 + depth*50),
+        overlay_edit.line((perk_block_x, perk_block_y, perk_block_x, perk_block_y + depth*50),
                           width=5,
                           fill=255)
 
-        overlay_edit.multiline_text((50+total_column_width, 230),
+        overlay_edit.multiline_text((50+perk_block_x, perk_block_y),
                                     spacing=20,
                                     text=perk_string,
                                     font=base_text,
                                     fill=(200, 200, 200))
+
         for i in range(depth):
             urllib.request.urlretrieve(f'https://bungie.net{icon_urls[i]}',
                                        f'{weapon.get_collectible_hash()}_icon.png')
@@ -72,10 +75,14 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
             icon = icon.resize((40, 40))
             enhance = ImageEnhance.Brightness(icon)
             mask = enhance.enhance(1)
-            overlay.paste(icon, (5+total_column_width, 230 + i*52), mask)
+            overlay.paste(icon, (5+perk_block_x, perk_block_y + i*52), mask)
 
-        total_column_width += 70 + column_width
+        perk_block_x += 70 + column_width
         n_cols += 1
+
+    # add origin perk ui elements
+    overlay_edit.line((0, 850, 1920, 850), width=10, fill=255)
+    overlay_edit.text((15, 870), spacing=20, text="Origin Perks", font=base_text, fill=(255, 255, 255))
 
     # composite all layers
     enhance = ImageEnhance.Brightness(dmg_type_img)

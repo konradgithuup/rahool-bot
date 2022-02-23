@@ -60,17 +60,26 @@ def query_plug_set(plug_hash: int) -> str:
 
 
 # connect to Manifest.content and query the perk with the given hash
-def query_perks(perk_hashes: list[str]) -> list[str]:
+def query_perks(perk_hashes: list[int]) -> list[str]:
     con = sqlite3.connect('resources/Manifest.content')
     cur = con.cursor()
     try:
-        cur.execute("""
-            SELECT
-                json_extract(DestinyInventoryItemDefinition.json, '$')
-            FROM
-                DestinyInventoryItemDefinition, json_tree(DestinyInventoryItemDefinition.json, '$')
-            WHERE
-                json_tree.key = 'hash' AND json_tree.value IN {}""".format(tuple(perk_hashes)))
+        if len(perk_hashes) > 1:
+            cur.execute("""
+                SELECT
+                    json_extract(DestinyInventoryItemDefinition.json, '$')
+                FROM
+                    DestinyInventoryItemDefinition, json_tree(DestinyInventoryItemDefinition.json, '$')
+                WHERE
+                    json_tree.key = 'hash' AND json_tree.value IN {}""".format(tuple(perk_hashes)))
+        else:
+            cur.execute("""
+                SELECT
+                    json_extract(DestinyInventoryItemDefinition.json, '$')
+                FROM
+                    DestinyInventoryItemDefinition, json_tree(DestinyInventoryItemDefinition.json, '$')
+                WHERE
+                    json_tree.key = 'hash' AND json_tree.value = ?""", (perk_hashes[0], ))
     except sqlite3.Error as e:
         logging.error(f'perk query caused {e}')
         raise

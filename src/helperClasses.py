@@ -3,6 +3,7 @@ import json
 import logging
 from typing import Union
 
+ORIGIN_TRAIT_HASH = 3993098925
 
 class ManifestData:
     # generate dictionary from db-json
@@ -14,7 +15,7 @@ class ManifestData:
 
 
 class Weapon(ManifestData):
-    weapon: dict[str, Union[int, str, dict[str, dict[Union[str, int], dict[str, Union[list[int], str]]]]]]
+    weapon: dict[str, Union[int, str, dict[str, dict[Union[str, int, dict[str, int]], dict[str, Union[list[int], str]]]]]]
 
     # weapon constructor
     def __init__(self, json_string):
@@ -66,17 +67,25 @@ class SocketSet:
     def get_socket_perk_indices(self) -> list[int]:
         return self.socket_set['socketCategories'][1]['socketIndexes']
 
+    def is_origin_socket(self, index: int) -> bool:
+        if self.socket_set['socketEntries'][index]['socketTypeHash'] == ORIGIN_TRAIT_HASH:
+            return True
+        return False
+
     def is_random_socket(self, index: int) -> bool:
-        if 'randomizedPlugSetHash' not in self.socket_set['socketEntries'][index]:
+        if 'randomizedPlugSetHash' in self.socket_set['socketEntries'][index]:
             return True
 
         return False
 
     def get_perk_sockets(self):
-        return self.socket_set['socketCategories'][1]['socketIndexes'];
+        return self.socket_set['socketCategories'][1]['socketIndexes']
 
     def get_plug_set_hash(self, index: int) -> int:
-        return self.socket_set['socketEntries'][index].get('randomizedPlugSetHash', 0)
+        set_type: str
+        if 'randomizedPlugSetHash' in self.socket_set['socketEntries'][index]:
+            return self.socket_set['socketEntries'][index].get('randomizedPlugSetHash', 0)
+        return self.socket_set['socketEntries'][index].get('reusablePlugSetHash', 0)
 
 
 class PlugSet(ManifestData):
