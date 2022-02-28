@@ -1,14 +1,15 @@
 import os
 
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
-from helperClasses import Weapon, PerkSet
+from helperClasses import Weapon, PerkColumn
 from readDB import query_damage_type
 import urllib.request
 
 COL_WIDTH: int = 500
+ENHANCED_PERK_DISCLAIMER: str = '(this weapon has enhanced perks obtainable through the relic on Mars)'
 
 
-def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
+def create_perk_image(weapon: Weapon, perk_set: list[PerkColumn]) -> str:
     # open/create required images
     urllib.request.urlretrieve(f'https://bungie.net{weapon.get_screenshot()}',
                                f'{weapon.get_collectible_hash()}.png')
@@ -21,6 +22,7 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
     dmg_type_img = dmg_type_img.resize((100, 100))
     overlay = Image.new('RGBA', (1920, 1080), (0, 0, 0, 96))
     glow = Image.open(f'resources/image_assets/weapon_glow_{weapon.get_rarity()}.png')
+    disclaimer = ""
 
     # open required fonts
     title = ImageFont.truetype('resources/fonts/FUTURA.ttf', 100)
@@ -41,6 +43,8 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
     perk_block_y: int = 150
     col_count = 0
     for column in perk_set:
+        if column.has_enhanced_perk():
+            disclaimer = ENHANCED_PERK_DISCLAIMER
         if col_count > 3:
             perk_block_y = 870
             perk_block_x = 250
@@ -50,9 +54,9 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
         icon_urls: list[str] = []
         column_width: int = 0
         for perk in column:
-            perk_string += f'{perk["name"]}\n'
-            icon_urls.append(perk['icon'])
-            perk_text_width = base_text.getbbox(text=perk['name'])[2]
+            perk_string += f'{perk.get_name()}\n'
+            icon_urls.append(perk.get_icon_url())
+            perk_text_width = base_text.getbbox(text=perk.get_name())[2]
             if perk_text_width > column_width:
                 column_width = perk_text_width
             depth += 1
@@ -83,6 +87,9 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkSet]) -> str:
     # add origin perk ui elements
     overlay_edit.line((0, 850, 1920, 850), width=10, fill=255)
     overlay_edit.text((15, 870), spacing=20, text="Origin Perks", font=base_text, fill=(255, 255, 255))
+
+    # add disclaimer
+    overlay_edit.text((15, 800), spacing=20, text=disclaimer, font=base_text, fill=(255, 230, 128), alpha=0.8)
 
     # composite all layers
     enhance = ImageEnhance.Brightness(dmg_type_img)

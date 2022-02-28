@@ -4,6 +4,8 @@ import logging
 from typing import Union
 
 ORIGIN_TRAIT_HASH = 3993098925
+ENHANCED_PERK = 'Enhanced Trait'
+
 
 class ManifestData:
     # generate dictionary from db-json
@@ -15,10 +17,27 @@ class ManifestData:
 
 
 class Weapon(ManifestData):
-    weapon: dict[str, Union[int, str, dict[str, dict[Union[str, int, dict[str, int]], dict[str, Union[list[int], str]]]]]]
+    weapon: dict[str,
+                 Union[int,
+                       str,
+                       dict[str,
+                            dict[Union[str,
+                                       int,
+                                       dict[str,
+                                            int]
+                                       ],
+                                 dict[str,
+                                      Union[list[int],
+                                            str]
+                                      ]
+                                 ]
+                            ]
+                       ]
+                 ]
 
     # weapon constructor
     def __init__(self, json_string):
+        # this is the part where I regret using Python
         self.weapon = self.deserialize(json_string=json_string)
 
     def get_item_type(self) -> int:
@@ -105,10 +124,10 @@ class PlugSet(ManifestData):
 
 
 class PerkIterator:
-    perk_set: PerkSet
+    perk_set: PerkColumn
     index: int
 
-    def __init__(self, perk_set: PerkSet):
+    def __init__(self, perk_set: PerkColumn):
         self.perk_set = perk_set
         self.index = 0
 
@@ -121,23 +140,48 @@ class PerkIterator:
         raise StopIteration
 
 
-class PerkSet(ManifestData):
-    perk_set: list[dict[str, Union[str, dict[str, str]]]]
+class PerkColumn:
+    normal_perks: list[Perk]
+    enhanced_perks: list[Perk]
 
     def __init__(self):
-        self.perk_set = []
+        self.normal_perks = []
+        self.enhanced_perks = []
 
     def __len__(self):
-        return len(self.perk_set)
+        return len(self.normal_perks)
 
     def __iter__(self):
         return PerkIterator(self)
 
     def __getitem__(self, item):
-        return self.perk_set[item]['displayProperties']
+        return self.normal_perks[item]
 
     def add_perk(self, json_string):
-        self.perk_set.append(self.deserialize(json_string))
+        perk = Perk(json_string)
+        if perk.is_enhanced():
+            self.enhanced_perks.append(perk)
+            return
+        self.normal_perks.append(perk)
+
+    def has_enhanced_perk(self) -> bool:
+        return len(self.enhanced_perks) > 0
+
+
+class Perk(ManifestData):
+    perk: dict[str, Union[str, dict[str, str]]]
+
+    def __init__(self, json_string):
+        self.perk = self.deserialize(json_string)
+
+    def get_name(self) -> str:
+        return self.perk['displayProperties']['name']
+
+    def get_icon_url(self) -> str:
+        return self.perk['displayProperties']['icon']
+
+    def is_enhanced(self) -> bool:
+        return self.perk['itemTypeDisplayName'] == ENHANCED_PERK
 
 
 class DamageType(ManifestData):

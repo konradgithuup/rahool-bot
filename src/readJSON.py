@@ -1,6 +1,6 @@
 import logging
 import threading
-from helperClasses import Weapon, SocketSet, PlugSet, PerkSet, DamageType
+from helperClasses import Weapon, SocketSet, PlugSet, PerkColumn, DamageType
 from customExceptions import NoRandomRollsError
 from typing import Optional
 
@@ -14,11 +14,11 @@ class ColumnThread(threading.Thread):
         self.thread_id: int = thread_id
         self.name: str = name
         self.column: list[str] = column
-        self.out: list[PerkSet] = out
+        self.out: list[PerkColumn] = out
 
     def run(self):
         logging.info(f"Starting {self.name}")
-        col: PerkSet = perk_set_from_hashes(self.column)
+        col: PerkColumn = perk_set_from_hashes(self.column)
         # acts as a "return value"
         self.out[self.thread_id-1] = col
         logging.info(f"Exiting {self.name}")
@@ -49,7 +49,7 @@ def get_damage_type_link(dmg_type_string: str) -> str:
 
 
 # prepare the weapon dictionary to get plug hashes
-async def get_weapon_plug_hashes(weapon: Weapon) -> list[PerkSet]:
+async def get_weapon_plug_hashes(weapon: Weapon) -> list[PerkColumn]:
     from readDB import query_plug_set
     perk_socket_set: SocketSet = SocketSet(weapon)
     plug_sets: list[str] = []
@@ -68,7 +68,7 @@ async def get_weapon_plug_hashes(weapon: Weapon) -> list[PerkSet]:
 
 
 # retrieve each plug sets perks
-async def get_plug_set_perk_hashes(plug_sets: list[str]) -> list[PerkSet]:
+async def get_plug_set_perk_hashes(plug_sets: list[str]) -> list[PerkColumn]:
     # store all perk hashes
     total_perk_hashes: list[list[int]] = []
     for plug_string in plug_sets:
@@ -82,9 +82,9 @@ async def get_plug_set_perk_hashes(plug_sets: list[str]) -> list[PerkSet]:
 
 
 # called upon by each ColumnThread
-def perk_set_from_hashes(column: list[str]) -> PerkSet:
+def perk_set_from_hashes(column: list[str]) -> PerkColumn:
     from readDB import query_perks
-    col: PerkSet = PerkSet()
+    col: PerkColumn = PerkColumn()
     perks = query_perks(column)
     for perk in perks:
         col.add_perk(perk[0])
@@ -93,8 +93,8 @@ def perk_set_from_hashes(column: list[str]) -> PerkSet:
 
 
 # handle multithreaded db lookup for weapon-perks
-async def get_perks(perk_hashes: list[list[int]]) -> list[PerkSet]:
-    total_perks: list[Optional[PerkSet]] = []
+async def get_perks(perk_hashes: list[list[int]]) -> list[PerkColumn]:
+    total_perks: list[Optional[PerkColumn]] = []
 
     i: int = 0
     threads: list[ColumnThread] = []
