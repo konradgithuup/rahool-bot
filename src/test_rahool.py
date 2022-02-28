@@ -3,7 +3,7 @@ import os
 import pytest
 from readDB import query_weapon
 from readJSON import get_weapon_plug_hashes
-from helperClasses import Weapon, PerkSet
+from helperClasses import Weapon, PerkColumn
 from customExceptions import NoSuchWeaponError, NoRandomRollsError
 from createImages import create_perk_image
 from PIL import Image
@@ -15,10 +15,10 @@ def test_weapon_query():
 
 async def get_first_perk(weapon_name: str) -> str:
     weapon: Weapon = query_weapon(weapon_name)
-    weapon_perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
+    weapon_perks: list[PerkColumn] = await get_weapon_plug_hashes(weapon)
     for col in weapon_perks:
         for perk in col:
-            return perk['name']
+            return perk.get_name()
 
 
 @pytest.mark.asyncio
@@ -70,10 +70,10 @@ async def test_image_generation_exotic(event_loop):
 
 async def weapon_image_gen(weapon: str):
     weapon: Weapon = query_weapon(weapon)
-    perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
+    perks: list[PerkColumn] = await get_weapon_plug_hashes(weapon)
 
     img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')
     img.show()
 
     os.remove(f'{weapon.get_damage_type()}.png')
-    os.remove(f'{weapon.get_collectible_hash()}.png')
+    # os.remove(f'{weapon.get_collectible_hash()}.png')

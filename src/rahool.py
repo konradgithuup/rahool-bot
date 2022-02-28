@@ -6,7 +6,7 @@ from readDB import query_weapon
 from readJSON import get_weapon_plug_hashes
 from APIrequests import check_update
 from createImages import create_perk_image
-from helperClasses import Weapon, PerkSet
+from helperClasses import Weapon, PerkColumn
 from customExceptions import NoSuchWeaponError, NoRandomRollsError
 
 BOT_PFP = 'https://cdn.discordapp.com/app-icons/725485079438032916/8cfe42f2a6930a82300aba44ef390306.png?size=512'
@@ -82,7 +82,7 @@ async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
         await inter.followup.send(content=None, embed=error)
         return
 
-    weapon_perks: list[PerkSet] = await get_weapon_plug_hashes(weapon)
+    weapon_perks: list[PerkColumn] = await get_weapon_plug_hashes(weapon)
     image = disnake.File(f'{create_perk_image(weapon, weapon_perks)}.png')
 
     await inter.followup.send(file=image)
