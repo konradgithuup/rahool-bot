@@ -4,3 +4,7 @@ class NoSuchWeaponError(Exception):
 
 class NoRandomRollsError(Exception):
     pass
+
+
+class NoGodRollError(Exception):
+    pass

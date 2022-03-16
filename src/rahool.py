@@ -2,12 +2,12 @@ import logging
 import os
 import disnake
 from disnake.ext import commands, tasks
-from readDB import query_weapon
+from readDB import query_weapon, query_god_roll
 from readJSON import get_weapon_plug_hashes
 from APIrequests import check_update
 from createImages import create_perk_image
-from helperClasses import Weapon, PerkColumn
-from customExceptions import NoSuchWeaponError, NoRandomRollsError
+from helperClasses import Weapon, PerkColumn, GodRollContainer
+from customExceptions import NoSuchWeaponError, NoRandomRollsError, NoGodRollError
 
 BOT_PFP = 'https://cdn.discordapp.com/app-icons/725485079438032916/8cfe42f2a6930a82300aba44ef390306.png?size=512'
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
@@ -47,6 +47,7 @@ async def help(inter):
     form.add_field(name='Shows all possible Weapon Perks', value='/perks <Weapon>')
     form.add_field(name='Examples', value='/perks Gridskipper\n'
                                           '/perks Astral Horizon')
+    form.add_field(name='Disclaimer', value='The highlighted perks are simply suggestions.\nGod rolls are always subjective and depend on what you want to achieve.')
 
     form.set_footer(text='"Some of these files are older than the city itself..."')
     form.set_author(name='help',
@@ -56,13 +57,24 @@ async def help(inter):
 
 
 # get weapon random rolls
-@rahool.slash_command(description="show a weapon's possible perks")
+@rahool.slash_command()
 async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
+    """
+    Returns the random rolls for a specific weapon
+
+    Parameters
+    ----------
+    weapon_name: :class:`str`
+        The queried weapon
+    """
     # temporary response to satisfy discord's response time limit
     await inter.response.defer()
 
+    weapon: Weapon
+    god_rolls: GodRollContainer
+
     try:
-        weapon: Weapon = query_weapon(weapon_name)
+        weapon = query_weapon(weapon_name)
     except NoSuchWeaponError:
         error = disnake.Embed(
             title="Error",
@@ -83,22 +95,18 @@ async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
         return
 
     weapon_perks: list[PerkColumn] = await get_weapon_plug_hashes(weapon)
+    try:
+        god_rolls = GodRollContainer(query_god_roll(weapon.get_hash()))
+        god_rolls.apply_to_perk_set(perk_set=weapon_perks)
+    except NoGodRollError:
+        pass
+
     image = disnake.File(f'{create_perk_image(weapon, weapon_perks)}.png')
 
     await inter.followup.send(file=image)
+
     os.remove(f'{weapon.get_damage_type()}.png')
     os.remove(f'{weapon.get_collectible_hash()}.png')
 
-
-@perks.error
-async def perks_error(inter, error):
-    form = disnake.Embed(
-        title='Error',
-        description='An error occurred using the perks command.\n'
-                    'See /help for more information',
-        colour=disnake.Colour.red()
-    )
-
-    await inter.response.send_message(content=None, embed=form)
 
 rahool.run(BOT_TOKEN)
