@@ -1,6 +1,6 @@
 import logging
 import threading
-from helperClasses import Weapon, SocketSet, PlugSet, PerkColumn, DamageType
+from helperClasses import Weapon, SocketSet, PlugSet, PerkColumn, DamageType, GodRollContainer
 from customExceptions import NoRandomRollsError
 from typing import Optional
 
@@ -13,7 +13,7 @@ class ColumnThread(threading.Thread):
         threading.Thread.__init__(self)
         self.thread_id: int = thread_id
         self.name: str = name
-        self.column: list[str] = column
+        self.column: list[int] = column
         self.out: list[PerkColumn] = out
 
     def run(self):
@@ -82,7 +82,7 @@ async def get_plug_set_perk_hashes(plug_sets: list[str]) -> list[PerkColumn]:
 
 
 # called upon by each ColumnThread
-def perk_set_from_hashes(column: list[str]) -> PerkColumn:
+def perk_set_from_hashes(column: list[int]) -> PerkColumn:
     from readDB import query_perks
     col: PerkColumn = PerkColumn()
     perks = query_perks(column)

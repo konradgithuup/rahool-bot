@@ -4,7 +4,7 @@ import os
 from APIrequests import get_manifest
 from readJSON import find_weapon, get_damage_type_link
 from helperClasses import Weapon
-from customExceptions import NoSuchWeaponError
+from customExceptions import NoSuchWeaponError, NoGodRollError
 
 
 # connect to Manifest.content and query all items named item_name
@@ -71,7 +71,7 @@ def query_perks(perk_hashes: list[int]) -> list[str]:
                 FROM
                     DestinyInventoryItemDefinition, json_tree(DestinyInventoryItemDefinition.json, '$')
                 WHERE
-                    json_tree.key = 'hash' AND json_tree.value IN {}""".format(tuple(perk_hashes)))
+                    json_tree.key = 'hash' AND json_tree.value IN {}""".format(tuple(map(int, perk_hashes))))
         else:
             cur.execute("""
                 SELECT
@@ -90,6 +90,30 @@ def query_perks(perk_hashes: list[int]) -> list[str]:
         logging.warning(f'"perk query did not yield db result')
 
     return perks
+
+
+def query_god_roll(weapon_hash: str) -> str:
+    con = sqlite3.connect('resources/CurationRolls.db')
+    cur = con.cursor()
+
+    try:
+        cur.execute("""
+        SELECT
+                    json_extract(Weapons.json, '$')
+                FROM
+                    Weapons, json_tree(Weapons.json, '$')
+                WHERE
+                    json_tree.key = 'hash' AND json_tree.value = ?""", (str(weapon_hash), ))
+    except sqlite3.Error as e:
+        logging.error(f'god roll query caused {e}')
+        raise
+
+    god_rolls: list[str] = cur.fetchone()
+
+    if god_rolls is None or len(god_rolls[0]) == 0:
+        raise NoGodRollError
+
+    return god_rolls[0]
 
 
 def query_damage_type(dmg_hash: str) -> str:

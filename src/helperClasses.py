@@ -1,10 +1,18 @@
 from __future__ import annotations
 import json
 import logging
+from enum import IntEnum
 from typing import Union
 
 ORIGIN_TRAIT_HASH = 3993098925
 ENHANCED_PERK = 'Enhanced Trait'
+
+
+class GameModeFlag(IntEnum):
+    empty = 0
+    pve = 1
+    pvp = 2
+    both = 3
 
 
 class ManifestData:
@@ -170,9 +178,20 @@ class PerkColumn:
 
 class Perk(ManifestData):
     perk: dict[str, Union[str, dict[str, str]]]
+    curation: GameModeFlag
 
     def __init__(self, json_string):
         self.perk = self.deserialize(json_string)
+        self.curation = GameModeFlag(GameModeFlag.empty)
+
+    def set_curation(self, god_rolls: GodRollContainer):
+        if self.perk['hash'] in god_rolls.get_rolls('PVP'):
+            self.curation += GameModeFlag.pvp
+        if self.perk['hash'] in god_rolls.get_rolls('PVE'):
+            self.curation += GameModeFlag.pve
+
+    def get_hash(self) -> str:
+        return str(self.perk['hash'])
 
     def get_name(self) -> str:
         return self.perk['displayProperties']['name']
@@ -192,3 +211,23 @@ class DamageType(ManifestData):
 
     def get_icon(self) -> str:
         return self.damage_type['displayProperties']['icon']
+
+
+class GodRollContainer(ManifestData):
+    god_rolls: dict[str, list[list[int]]]
+
+    def __init__(self, json_string):
+        self.god_rolls = self.deserialize(json_string=json_string)
+
+    def get_rolls(self, game_mode: str) -> list[list[int]]:
+        return self.god_rolls[game_mode]
+
+    def apply_to_perk_set(self, perk_set: list[PerkColumn]):
+        print(self.god_rolls['hash'])
+        print(self.god_rolls['PVP'])
+        for i in range(len(perk_set)):
+            for perk in perk_set[i]:
+                if perk.get_hash() in self.god_rolls['PVP'][i]:
+                    perk.curation += GameModeFlag.pvp
+                if perk.get_hash() in self.god_rolls['PVE'][i]:
+                    perk.curation += GameModeFlag.pve
