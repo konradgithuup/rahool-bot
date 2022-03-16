@@ -97,11 +97,9 @@ async def weapon_image_gen(weapon: str):
     perks: list[PerkColumn] = await get_weapon_plug_hashes(weapon)
 
     try:
-        print("test")
-        # god_rolls = GodRollContainer(query_god_roll(weapon.get_hash()))
-        # god_rolls.apply_to_perk_set(perk_set=perks)
+        god_rolls = GodRollContainer(query_god_roll(weapon.get_hash()))
+        god_rolls.apply_to_perk_set(perk_set=perks)
     except NoGodRollError:
-        print("no maidens?")
         pass
 
     img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')
@@ -114,7 +112,6 @@ async def weapon_image_gen(weapon: str):
 async def god_roll_gen(weapon: str, mode: str):
     weapon: Weapon = query_weapon(weapon)
     god_rolls: list[list[int]] = GodRollContainer(query_god_roll(weapon.get_hash())).get_rolls(game_mode=mode)
-    print(god_rolls)
     perks: list[PerkColumn] = await get_perks(perk_hashes=god_rolls)
 
     img: Image = Image.open(f'{create_god_roll_image(weapon, perks, mode)}.png')

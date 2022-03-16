@@ -223,8 +223,6 @@ class GodRollContainer(ManifestData):
         return self.god_rolls[game_mode]
 
     def apply_to_perk_set(self, perk_set: list[PerkColumn]):
-        print(self.god_rolls['hash'])
-        print(self.god_rolls['PVP'])
         for i in range(len(perk_set)):
             for perk in perk_set[i]:
                 if perk.get_hash() in self.god_rolls['PVP'][i]:

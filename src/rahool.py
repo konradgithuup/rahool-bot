@@ -3,7 +3,7 @@ import os
 import disnake
 from disnake.ext import commands, tasks
 from readDB import query_weapon, query_god_roll
-from readJSON import get_weapon_plug_hashes, get_perks
+from readJSON import get_weapon_plug_hashes
 from APIrequests import check_update
 from createImages import create_perk_image
 from helperClasses import Weapon, PerkColumn, GodRollContainer
@@ -47,49 +47,13 @@ async def help(inter):
     form.add_field(name='Shows all possible Weapon Perks', value='/perks <Weapon>')
     form.add_field(name='Examples', value='/perks Gridskipper\n'
                                           '/perks Astral Horizon')
+    form.add_field(name='Disclaimer', value='The highlighted perks are simply suggestions.\nGod rolls are always subjective and depend on what you want to achieve.')
 
     form.set_footer(text='"Some of these files are older than the city itself..."')
     form.set_author(name='help',
                     icon_url=BOT_PFP)
 
     await inter.response.send_message(embed=form)
-
-
-@rahool.slash_command()
-async def god_rolls(inter,
-                    weapon_name: str = commands.Param(name="weapon"),
-                    mode = commands.Param(name="gamemode", choices=["PVE", "PVP"])):
-    """
-    Returns 'god roll' perks for a specific weapon in PVE/PVP (using the DIM dataset)
-
-    Parameters
-    ----------
-    weapon_name: :class:`str`
-        The queried weapon
-    mode: :class:`int`
-        The selected game mode
-    """
-    # temporary response to satisfy discord's response time limit
-    await inter.response.defer()
-
-    # get weapon by name
-    weapon: Weapon = query_weapon(weapon_name)
-    # get god rolls from weapon
-    try:
-        god_rolls: list[list[int]] = GodRollContainer(query_god_roll(weapon.get_hash())).get_rolls(game_mode=mode)
-    except NoGodRollError:
-        error = disnake.Embed(
-            title="Pardon our Dust",
-            description=f"There are no {mode} god rolls registered for {weapon_name}",
-            colour=disnake.Colour.red()
-        )
-        await inter.followup.send(content=None, embed=error)
-        return
-    # get perks
-    perks: list[PerkColumn] = await get_perks(perk_hashes=god_rolls)
-    # generate image
-
-    await inter.followup.send(content=f"You selected {weapon_name}, {mode}")
 
 
 # get weapon random rolls
@@ -132,11 +96,9 @@ async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
 
     weapon_perks: list[PerkColumn] = await get_weapon_plug_hashes(weapon)
     try:
-        print("test")
         god_rolls = GodRollContainer(query_god_roll(weapon.get_hash()))
         god_rolls.apply_to_perk_set(perk_set=weapon_perks)
     except NoGodRollError:
-        print("no maidens?")
         pass
 
     image = disnake.File(f'{create_perk_image(weapon, weapon_perks)}.png')

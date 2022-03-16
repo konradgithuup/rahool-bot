@@ -105,12 +105,10 @@ def draw_perks(overlay: Image, weapon: Weapon, perk_set: list[PerkColumn], base_
 
         col_count += 1
         depth: int = 0
-        perk_string: str = ''
         icon_urls: list[str] = []
         column_width: int = 0
 
         for perk in column:
-            # perk_string += f'{perk.get_name()} + {perk.curation}\n'
             icon_urls.append(perk.get_icon_url())
             perk_text_width = base_text.getbbox(text=perk.get_name())[2]
 
@@ -126,8 +124,6 @@ def draw_perks(overlay: Image, weapon: Weapon, perk_set: list[PerkColumn], base_
         overlay_edit.line((perk_block_x, perk_block_y, perk_block_x, perk_block_y + depth * 50),
                           width=5,
                           fill=255)
-
-        # overlay_edit.multiline_text((50 + perk_block_x, perk_block_y),spacing=20,text=perk_string,font=base_text,fill=(200, 200, 200))
 
         for i in range(depth):
             urllib.request.urlretrieve(f'https://bungie.net{icon_urls[i]}',
