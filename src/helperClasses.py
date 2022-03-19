@@ -223,7 +223,11 @@ class GodRollContainer(ManifestData):
         return self.god_rolls[game_mode]
 
     def apply_to_perk_set(self, perk_set: list[PerkColumn]):
-        for i in range(len(perk_set)):
+        iter_len: int = len(self.god_rolls['PVP'])
+        if len(perk_set) < iter_len:
+            iter_len = len(perk_set)
+
+        for i in range(iter_len):
             for perk in perk_set[i]:
                 if perk.get_hash() in self.god_rolls['PVP'][i]:
                     perk.curation += GameModeFlag.pvp

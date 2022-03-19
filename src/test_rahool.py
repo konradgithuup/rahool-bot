@@ -71,13 +71,13 @@ async def test_image_generation_legendary_no_origin(event_loop):
 @pytest.mark.perks
 @pytest.mark.asyncio
 async def test_image_generation_legendary_single_origin(event_loop):
-    await weapon_image_gen("Hung Jury SR4")
+    await weapon_image_gen("Thoughtless")
 
 
 @pytest.mark.perks
 @pytest.mark.asyncio
 async def test_image_generation_legendary_multiple_origin(event_loop):
-    await weapon_image_gen("Herod-C")
+    await weapon_image_gen("Reed's Regret")
 
 
 @pytest.mark.perks
