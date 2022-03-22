@@ -86,49 +86,48 @@ class Weapon(ManifestData):
 
 
 class SocketSet:
-    socket_set: dict[str, dict[Union[str, int], dict[str, Union[list[int], str]]]]
+    sockets: list[dict[str, Union[list[int], str]]]
+    perk_socket_indices: list[int]
 
     def __init__(self, weapon: Weapon):
-        self.socket_set = weapon.get_socket_set()
+        socket_set = weapon.get_socket_set()
 
-    def get_socket_perk_indices(self) -> list[int]:
-        return self.socket_set['socketCategories'][1]['socketIndexes']
+        self.sockets = socket_set['socketEntries']
+        self.perk_socket_indices = socket_set['socketCategories'][1]['socketIndexes']
 
     def is_origin_socket(self, index: int) -> bool:
-        if self.socket_set['socketEntries'][index]['socketTypeHash'] == ORIGIN_TRAIT_HASH:
+        if self.sockets[index]['socketTypeHash'] == ORIGIN_TRAIT_HASH:
             return True
         return False
 
     def is_random_socket(self, index: int) -> bool:
-        if 'randomizedPlugSetHash' in self.socket_set['socketEntries'][index]:
+        if 'randomizedPlugSetHash' in self.sockets[index]:
             return True
-
         return False
 
-    def get_perk_sockets(self):
-        return self.socket_set['socketCategories'][1]['socketIndexes']
+    def get_perk_socket_indices(self):
+        return self.perk_socket_indices
 
     def get_plug_set_hash(self, index: int) -> int:
         set_type: str
-        if 'randomizedPlugSetHash' in self.socket_set['socketEntries'][index]:
-            return self.socket_set['socketEntries'][index].get('randomizedPlugSetHash', 0)
-        return self.socket_set['socketEntries'][index].get('reusablePlugSetHash', 0)
+        if 'randomizedPlugSetHash' in self.sockets[index]:
+            return self.sockets[index].get('randomizedPlugSetHash', 0)
+        return self.sockets[index].get('reusablePlugSetHash', 0)
 
 
 class PlugSet(ManifestData):
-    plug_set: dict[str, Union[int, dict[int, Union[str, bool]]]]
+    perk_hashes: list[int]
 
     def __init__(self, json_string: str):
-        self.plug_set = self.deserialize(json_string=json_string)
+        plug_set = self.deserialize(json_string=json_string)
+        self.perk_hashes = []
+
+        for plug_item in plug_set['reusablePlugItems']:
+            if plug_item['currentlyCanRoll'] is True:
+                self.perk_hashes.append(plug_item['plugItemHash'])
 
     def get_perk_hashes(self) -> list[int]:
-        column: list[int] = []
-
-        for plug_item in self.plug_set['reusablePlugItems']:
-            if plug_item['currentlyCanRoll'] is True:
-                column.append(plug_item['plugItemHash'])
-
-        return column
+        return self.perk_hashes
 
 
 class PerkIterator:
@@ -177,59 +176,68 @@ class PerkColumn:
 
 
 class Perk(ManifestData):
-    perk: dict[str, Union[str, dict[str, str]]]
+    hash: str
+    name: str
+    icon_url: str
+    item_type: str
     curation: GameModeFlag
 
-    def __init__(self, json_string):
-        self.perk = self.deserialize(json_string)
-        self.curation = GameModeFlag(GameModeFlag.empty)
+    def __init__(self, database_result):
+        perk = self.deserialize(database_result)
 
-    def set_curation(self, god_rolls: GodRollContainer):
-        if self.perk['hash'] in god_rolls.get_rolls('PVP'):
-            self.curation += GameModeFlag.pvp
-        if self.perk['hash'] in god_rolls.get_rolls('PVE'):
-            self.curation += GameModeFlag.pve
+        self.curation = GameModeFlag.empty
+        self.hash = str(perk['hash'])
+        self.name = perk['displayProperties']['name']
+        self.icon_url = perk['displayProperties']['icon']
+        self.item_type = perk['itemTypeDisplayName']
+
+    def set_curation(self, gamemode: GameModeFlag):
+        self.curation += gamemode
 
     def get_hash(self) -> str:
-        return str(self.perk['hash'])
+        return self.hash
 
     def get_name(self) -> str:
-        return self.perk['displayProperties']['name']
+        return self.name
 
     def get_icon_url(self) -> str:
-        return self.perk['displayProperties']['icon']
+        return self.icon_url
 
     def is_enhanced(self) -> bool:
-        return self.perk['itemTypeDisplayName'] == ENHANCED_PERK
+        return self.item_type == ENHANCED_PERK
 
 
 class DamageType(ManifestData):
-    damage_type: dict[Union[str, dict[str, str]], Union[dict[str, str], str]]
+    icon_url: str
 
-    def __init__(self, json_string):
-        self.damage_type = self.deserialize(json_string=json_string)
+    def __init__(self, database_result):
+        damage_type = self.deserialize(json_string=database_result)
+        self.icon_url = damage_type['displayProperties']['icon']
 
     def get_icon(self) -> str:
-        return self.damage_type['displayProperties']['icon']
+        return self.icon_url
 
 
 class GodRollContainer(ManifestData):
-    god_rolls: dict[str, list[list[int]]]
+    pvp_rolls: list[list[int]]
+    pve_rolls: list[list[int]]
+    weapon_hash: str
 
-    def __init__(self, json_string):
-        self.god_rolls = self.deserialize(json_string=json_string)
+    def __init__(self, database_result):
+        god_rolls = self.deserialize(json_string=database_result)
 
-    def get_rolls(self, game_mode: str) -> list[list[int]]:
-        return self.god_rolls[game_mode]
+        self.pvp_rolls = god_rolls['PVP']
+        self.pve_rolls = god_rolls['PVE']
+        self.weapon_hash = str(god_rolls['hash'])
 
     def apply_to_perk_set(self, perk_set: list[PerkColumn]):
-        iter_len: int = len(self.god_rolls['PVP'])
+        iter_len: int = len(self.pvp_rolls)
         if len(perk_set) < iter_len:
             iter_len = len(perk_set)
 
         for i in range(iter_len):
             for perk in perk_set[i]:
-                if perk.get_hash() in self.god_rolls['PVP'][i]:
-                    perk.curation += GameModeFlag.pvp
-                if perk.get_hash() in self.god_rolls['PVE'][i]:
-                    perk.curation += GameModeFlag.pve
+                if perk.get_hash() in self.pvp_rolls[i]:
+                    perk.set_curation(GameModeFlag.pvp)
+                if perk.get_hash() in self.pve_rolls[i]:
+                    perk.set_curation(GameModeFlag.pve)
