@@ -25,62 +25,59 @@ class ManifestData:
 
 
 class Weapon(ManifestData):
-    weapon: dict[str,
-                 Union[int,
-                       str,
-                       dict[str,
-                            dict[Union[str,
-                                       int,
-                                       dict[str,
-                                            int]
-                                       ],
-                                 dict[str,
-                                      Union[list[int],
-                                            str]
-                                      ]
-                                 ]
-                            ]
-                       ]
-                 ]
+    item_type: int
+    name: str
+    rarity: str
+    collectible_hash: str
+    hash: str
+    screenshot_url: str
+    socket_set: SocketSet
+    type: str
+    damage_type: str
 
     # weapon constructor
     def __init__(self, json_string):
         # this is the part where I regret using Python
-        self.weapon = self.deserialize(json_string=json_string)
+        weapon = self.deserialize(json_string=json_string)
+
+        self.item_type = weapon['itemType']
+        self.type = weapon['itemTypeAndTierDisplayName']
+        self.name = weapon['displayProperties']['name']
+        self.collectible_hash = str(weapon['collectibleHash'])
+        self.hash = str(weapon['hash'])
+        self.screenshot_url = weapon['screenshot']
+        self.socket_set = SocketSet(self.get_socket_set())
 
     def get_item_type(self) -> int:
-        return self.weapon['itemType']
+        return self.item_type
 
     def get_name(self) -> str:
-        return self.weapon['displayProperties']['name']
+        return self.name
 
     def get_rarity(self) -> str:
-        return self.weapon['itemTypeAndTierDisplayName'].split(" ")[0]
+        return self.type.split(" ")[0]
 
     def get_collectible_hash(self) -> str:
-        return self.weapon['collectibleHash']
+        return self.collectible_hash
 
     def get_hash(self) -> str:
-        return self.weapon['hash']
+        return self.hash
 
     def get_screenshot(self) -> str:
-        return self.weapon['screenshot']
+        return self.screenshot_url
 
     def get_socket_set(self):
-        return self.weapon['sockets']
+        return self.socket_set
 
     def get_type(self) -> str:
-        return self.weapon['itemTypeAndTierDisplayName']
-
-    def get_description(self) -> str:
-        return self.weapon['flavorText']
+        return self.type
 
     def get_damage_type(self) -> str:
-        return self.weapon['defaultDamageTypeHash']
+        return self.damage_type
 
     def has_random_roll(self) -> bool:
-        for socket in self.weapon['sockets']['socketEntries']:
-            if 'randomizedPlugSetHash' in socket:
+        for i in range(self.socket_set.get_size()):
+            if self.socket_set.is_random_socket(i):
                 return True
         return False
 
@@ -89,11 +86,14 @@ class SocketSet:
     sockets: list[dict[str, Union[list[int], str]]]
     perk_socket_indices: list[int]
 
-    def __init__(self, weapon: Weapon):
-        socket_set = weapon.get_socket_set()
+    def __init__(self, sockets):
+        socket_set = sockets
 
         self.sockets = socket_set['socketEntries']
         self.perk_socket_indices = socket_set['socketCategories'][1]['socketIndexes']
+
+    def get_size(self) -> int:
+        return len(self.sockets)
 
     def is_origin_socket(self, index: int) -> bool:
         if self.sockets[index]['socketTypeHash'] == ORIGIN_TRAIT_HASH:
