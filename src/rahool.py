@@ -108,5 +108,4 @@ async def perks(inter, weapon_name: str = commands.Param(name="weapon")):
     os.remove(f'{weapon.get_damage_type()}.png')
     os.remove(f'{weapon.get_collectible_hash()}.png')
 
-
 rahool.run(BOT_TOKEN)

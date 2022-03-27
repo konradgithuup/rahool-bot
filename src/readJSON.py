@@ -30,7 +30,11 @@ def find_weapon(weapon_db: list[list[str]]) -> Weapon:
         raise NoRandomRollsError
 
     weapon_string: list[str] = weapon_db[0]
-    weapon: Weapon = Weapon(json_string=weapon_string[0])
+    try:
+        weapon: Weapon = Weapon(json_string=weapon_string[0])
+    except KeyError:
+        weapon_db.pop(0)
+        return find_weapon(weapon_db)
 
     if weapon.get_item_type() != ITEM_TYPE_WEAPON:
         weapon_db.pop(0)
@@ -51,13 +55,12 @@ def get_damage_type_link(dmg_type_string: str) -> str:
 # prepare the weapon dictionary to get plug hashes
 async def get_weapon_plug_hashes(weapon: Weapon) -> list[PerkColumn]:
     from readDB import query_plug_set
-    perk_socket_set: SocketSet = SocketSet(weapon)
+    perk_socket_set: SocketSet = weapon.get_socket_set()
     plug_sets: list[str] = []
     i: int = 1
-    perk_sockets = perk_socket_set.get_perk_sockets()
 
     # get plug hash for all columns that store randomized weapon perks
-    while i < perk_sockets[len(perk_sockets)-1]:
+    while i < perk_socket_set.get_size():
 
         if perk_socket_set.is_random_socket(index=i) or perk_socket_set.is_origin_socket(index=i):
             plug_set: int = perk_socket_set.get_plug_set_hash(index=i)
