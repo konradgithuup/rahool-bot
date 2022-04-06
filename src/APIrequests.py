@@ -11,6 +11,11 @@ HALF_HOUR = 1800
 
 # get destiny 2 game Manifest from the Bungie api
 def get_manifest():
+    """
+    gets manifest database from Bungie and sets it up under 'resources/Manifest.content'
+
+    :raises requests.exceptions.RequestException: if GET request fails
+    """
     manifest_url = BASE_URL
 
     # get manifest location
@@ -18,7 +23,7 @@ def get_manifest():
         r = requests.get(manifest_url, headers=HEADERS)
     except requests.exceptions.RequestException as e:
         logging.error(f'request failed, reason {e}')
-        raise
+        raise e
 
     manifest: dict = r.json()
     mani_url: str = 'https://www.bungie.net' + manifest['Response']['mobileWorldContentPaths']['en']
@@ -44,6 +49,9 @@ def get_manifest():
 
 # checks if a more recent Manifest exists, calls update if needed
 def check_update():
+    """
+    compares md5 sum of local game database with the one currently provided by Bungie. Updates when different.
+    """
     if not os.path.isfile(r'resources/Manifest.content'):
         get_manifest()
         return
@@ -72,6 +80,9 @@ def check_update():
 
 # updates the manifest
 def update_manifest():
+    """
+    removes old game database and calls get_manifest()
+    """
     os.remove("resources/Manifest.content")
     logging.info('old manifest removed')
     get_manifest()

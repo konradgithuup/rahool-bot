@@ -55,7 +55,6 @@ class Weapon(ManifestData):
         """
         :param json_string: json-formatted output of Destiny 2 database
         """
-        # this is the part where I regret using Python
         weapon = self.deserialize(json_string=json_string)
 
         self.item_type = weapon['itemType']
