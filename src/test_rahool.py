@@ -4,8 +4,8 @@ import pytest
 from readDB import query_weapon, query_god_roll
 from readJSON import get_weapon_plug_hashes, get_perks
 from helperClasses import Weapon, PerkColumn, GodRollContainer
-from customExceptions import NoSuchWeaponError, NoRandomRollsError, NoGodRollError
-from createImages import create_perk_image, create_god_roll_image
+from customExceptions import NoSuchWeaponError, NoRandomRollsError
+from commandCallFunctions import generate_perk_information_image
 from PIL import Image
 
 
@@ -24,7 +24,7 @@ def test_weapon_query():
 
 async def get_first_perk(weapon_name: str) -> str:
     weapon: Weapon = query_weapon(weapon_name)
-    weapon_perks: list[PerkColumn] = await get_weapon_plug_hashes(weapon)
+    weapon_perks: list[PerkColumn] = await get_weapon_plug_hashes(weapon.get_socket_set())
     for col in weapon_perks:
         for perk in col:
             return perk.get_name()
@@ -86,34 +86,9 @@ async def test_image_generation_exotic(event_loop):
     await weapon_image_gen("Hawkmoon")
 
 
-@pytest.mark.godroll
-@pytest.mark.asyncio
-async def test_god_roll_pve(event_loop):
-    await god_roll_gen("Hung Jury SR4", "PVE")
-
-
 async def weapon_image_gen(weapon: str):
-    weapon: Weapon = query_weapon(weapon)
-    perks: list[PerkColumn] = await get_weapon_plug_hashes(weapon)
+    image_name: str = await generate_perk_information_image(weapon)
+    image = Image.open(image_name)
+    image.show()
 
-    try:
-        god_rolls = GodRollContainer(query_god_roll(weapon.get_hash()))
-        god_rolls.apply_to_perk_set(perk_set=perks)
-    except NoGodRollError:
-        pass
-
-    img: Image = Image.open(f'{create_perk_image(weapon, perks)}.png')
-    img.show()
-
-    os.remove(f'{weapon.get_damage_type()}.png')
-    os.remove(f'{weapon.get_collectible_hash()}.png')
-
-
-async def god_roll_gen(weapon: str, mode: str):
-    weapon: Weapon = query_weapon(weapon)
-    god_rolls: list[list[int]] = GodRollContainer(query_god_roll(weapon.get_hash())).get_rolls(game_mode=mode)
-    perks: list[PerkColumn] = await get_perks(perk_hashes=god_rolls)
-
-    img: Image = Image.open(f'{create_god_roll_image(weapon, perks, mode)}.png')
-    img.show()
-    os.remove(f'{weapon.get_hash()}.png')
+    os.remove(image_name)
