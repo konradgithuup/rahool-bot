@@ -9,6 +9,9 @@ ENHANCED_PERK = 'Enhanced Trait'
 
 
 class GameModeFlag(IntEnum):
+    """
+    Represents the states of a weapon's possible curation status.
+    """
     empty = 0
     pve = 1
     pvp = 2
@@ -16,8 +19,17 @@ class GameModeFlag(IntEnum):
 
 
 class ManifestData:
+    """
+    wraps deserialization method to generate dictionary from a json-formatted string
+    """
     # generate dictionary from db-json
     def deserialize(self, json_string: str) -> dict:
+        """
+        generates a dictionary from a json-formatted string
+
+        :param json_string: str
+        :return: dictionary containing key value pairs stored in the json
+        """
         try:
             return json.loads(json_string)
         except json.JSONDecodeError as e:
@@ -25,117 +37,200 @@ class ManifestData:
 
 
 class Weapon(ManifestData):
-    weapon: dict[str,
-                 Union[int,
-                       str,
-                       dict[str,
-                            dict[Union[str,
-                                       int,
-                                       dict[str,
-                                            int]
-                                       ],
-                                 dict[str,
-                                      Union[list[int],
-                                            str]
-                                      ]
-                                 ]
-                            ]
-                       ]
-                 ]
+    """
+    Contains relevant information of a weapon's InventoryItemDefinition's database entry.
+    """
+    item_type: int
+    name: str
+    rarity: str
+    collectible_hash: str
+    hash: str
+    screenshot_url: str
+    socket_set: SocketSet
+    type: str
+    damage_type: str
 
     # weapon constructor
-    def __init__(self, json_string):
-        # this is the part where I regret using Python
-        self.weapon = self.deserialize(json_string=json_string)
+    def __init__(self, json_string: str):
+        """
+        :param json_string: json-formatted output of Destiny 2 database
+        """
+        weapon = self.deserialize(json_string=json_string)
+
+        self.item_type = weapon['itemType']
+        self.type = weapon['itemTypeAndTierDisplayName']
+        self.name = weapon['displayProperties']['name']
+        self.collectible_hash = str(weapon['collectibleHash'])
+        self.hash = str(weapon['hash'])
+        self.screenshot_url = weapon['screenshot']
+        self.damage_type = weapon['defaultDamageTypeHash']
+        self.socket_set = SocketSet(weapon['sockets'])
 
     def get_item_type(self) -> int:
-        return self.weapon['itemType']
+        """
+        :return: type of item encoded as Integer value
+        """
+        return self.item_type
 
     def get_name(self) -> str:
-        return self.weapon['displayProperties']['name']
+        """
+        :return: weapon name as String value
+        """
+        return self.name
 
     def get_rarity(self) -> str:
-        return self.weapon['itemTypeAndTierDisplayName'].split(" ")[0]
+        """
+        :return: weapon rarity as :class: 'str' value
+        """
+        return self.type.split(" ")[0]
 
     def get_collectible_hash(self) -> str:
-        return self.weapon['collectibleHash']
+        """
+        :return: hash of the weapon's CollectibleItemDefinition db-entry as String
+        """
+        return self.collectible_hash
 
     def get_hash(self) -> str:
-        return self.weapon['hash']
+        """
+        :return: hash of the weapon's InventoryItemDefinition db-entry as String
+        """
+        return self.hash
 
     def get_screenshot(self) -> str:
-        return self.weapon['screenshot']
+        """
+        gets weapon screenshot url; requires bungie.net base url
 
-    def get_socket_set(self):
-        return self.weapon['sockets']
+        :return: url for weapon jpg screenshot image as String
+        """
+        return self.screenshot_url
+
+    def get_socket_set(self) -> SocketSet:
+        """
+        gets 'socket' subset of the weapon stored as SocketSet object
+
+        :return: weapon specific instance of SocketSet
+        """
+        return self.socket_set
 
     def get_type(self) -> str:
-        return self.weapon['itemTypeAndTierDisplayName']
+        """
+        gets weapon type and rarity as String
 
-    def get_description(self) -> str:
-        return self.weapon['flavorText']
+        :return: weapon type and rarity
+        """
+        return self.type
 
     def get_damage_type(self) -> str:
-        return self.weapon['defaultDamageTypeHash']
+        """
+        :return: weapon damage type hash as String. References DestinyDamageTypeDefinition db-entry
+        """
+        return self.damage_type
 
     def has_random_roll(self) -> bool:
-        for socket in self.weapon['sockets']['socketEntries']:
-            if 'randomizedPlugSetHash' in socket:
+        """
+        iterates over all sockets to check for random Perks
+
+        :return: True if at least 1 socket contains random Perks. False if no socket contains random perks.
+        """
+        for i in range(self.socket_set.get_size()):
+            if self.socket_set.is_random_socket(i):
                 return True
         return False
 
 
 class SocketSet:
-    socket_set: dict[str, dict[Union[str, int], dict[str, Union[list[int], str]]]]
+    """
+    Subset of Weapon which represents values stored under an items 'sockets' key
+    """
+    sockets: list[dict[str, Union[list[int], str]]]
+    perk_socket_indices: list[int]
 
-    def __init__(self, weapon: Weapon):
-        self.socket_set = weapon.get_socket_set()
+    def __init__(self, sockets):
+        """
+        :param sockets: value of a weapon's 'sockets' key
+        """
+        socket_set = sockets
 
-    def get_socket_perk_indices(self) -> list[int]:
-        return self.socket_set['socketCategories'][1]['socketIndexes']
+        self.sockets = socket_set['socketEntries']
+        self.perk_socket_indices = socket_set['socketCategories'][1]['socketIndexes']
+
+    def get_size(self) -> int:
+        """
+        :return: size of socket list
+        """
+        return len(self.sockets)
 
     def is_origin_socket(self, index: int) -> bool:
-        if self.socket_set['socketEntries'][index]['socketTypeHash'] == ORIGIN_TRAIT_HASH:
+        """
+        :param index: index of the socket entry
+        :return: True if the socket contains at least one origin trait.
+        False if socket does not contain any origin traits
+        """
+        if self.sockets[index]['socketTypeHash'] == ORIGIN_TRAIT_HASH:
             return True
         return False
 
     def is_random_socket(self, index: int) -> bool:
-        if 'randomizedPlugSetHash' in self.socket_set['socketEntries'][index]:
+        """
+        :param index: index of the socket entry
+        :return: True if socket contains a random perk set, false if it doesn't
+        """
+        if 'randomizedPlugSetHash' in self.sockets[index]:
             return True
-
         return False
 
-    def get_perk_sockets(self):
-        return self.socket_set['socketCategories'][1]['socketIndexes']
+    def get_perk_socket_indices(self) -> list[int]:
+        """
+        :return: list of all sockets containing a static or a random perk set
+        """
+        return self.perk_socket_indices
 
     def get_plug_set_hash(self, index: int) -> int:
+        """
+        :param index: index of the socket entry
+        :return: hash value of the static or random plug set stored in queried socket entry
+        """
         set_type: str
-        if 'randomizedPlugSetHash' in self.socket_set['socketEntries'][index]:
-            return self.socket_set['socketEntries'][index].get('randomizedPlugSetHash', 0)
-        return self.socket_set['socketEntries'][index].get('reusablePlugSetHash', 0)
+        if 'randomizedPlugSetHash' in self.sockets[index]:
+            return self.sockets[index].get('randomizedPlugSetHash', 0)
+        return self.sockets[index].get('reusablePlugSetHash', 0)
 
 
 class PlugSet(ManifestData):
-    plug_set: dict[str, Union[int, dict[int, Union[str, bool]]]]
+    """
+    Contains relevant information of a plug set's PlugSetDefinition's database entry.
+    """
+    perk_hashes: list[int]
 
     def __init__(self, json_string: str):
-        self.plug_set = self.deserialize(json_string=json_string)
+        """
+        :param json_string: json-formatted output of Destiny 2 database
+        """
+        plug_set = self.deserialize(json_string=json_string)
+        self.perk_hashes = []
+
+        for plug_item in plug_set['reusablePlugItems']:
+            if plug_item['currentlyCanRoll'] is True:
+                self.perk_hashes.append(plug_item['plugItemHash'])
 
     def get_perk_hashes(self) -> list[int]:
-        column: list[int] = []
-
-        for plug_item in self.plug_set['reusablePlugItems']:
-            if plug_item['currentlyCanRoll'] is True:
-                column.append(plug_item['plugItemHash'])
-
-        return column
+        """
+        :return: hashes of all perks contained in plug set
+        """
+        return self.perk_hashes
 
 
 class PerkIterator:
+    """
+    Iterator for lists of Perk objects
+    """
     perk_set: PerkColumn
     index: int
 
     def __init__(self, perk_set: PerkColumn):
+        """
+        :param perk_set: perk column over which to iterate
+        """
         self.perk_set = perk_set
         self.index = 0
 
@@ -149,6 +244,9 @@ class PerkIterator:
 
 
 class PerkColumn:
+    """
+    Container for all Perks of a column.
+    """
     normal_perks: list[Perk]
     enhanced_perks: list[Perk]
 
@@ -157,6 +255,9 @@ class PerkColumn:
         self.enhanced_perks = []
 
     def __len__(self):
+        """
+        :return: length of the 'normal_perks' list
+        """
         return len(self.normal_perks)
 
     def __iter__(self):
@@ -166,6 +267,9 @@ class PerkColumn:
         return self.normal_perks[item]
 
     def add_perk(self, json_string):
+        """
+        :param json_string: json-formatted perk query output of Destiny 2 database
+        """
         perk = Perk(json_string)
         if perk.is_enhanced():
             self.enhanced_perks.append(perk)
@@ -173,63 +277,115 @@ class PerkColumn:
         self.normal_perks.append(perk)
 
     def has_enhanced_perk(self) -> bool:
+        """
+        :return: True if the corresponding weapon has at least 1 enhanced perk. False if not.
+        """
         return len(self.enhanced_perks) > 0
 
 
 class Perk(ManifestData):
-    perk: dict[str, Union[str, dict[str, str]]]
+    """
+    Contains relevant information of a perks InventoryItemDefiniton's database entry.
+    """
+    hash: str
+    name: str
+    icon_url: str
+    item_type: str
     curation: GameModeFlag
 
-    def __init__(self, json_string):
-        self.perk = self.deserialize(json_string)
-        self.curation = GameModeFlag(GameModeFlag.empty)
+    def __init__(self, database_result):
+        """
+        :param database_result: json-formatted perk query output of Destiny 2 database
+        """
+        perk = self.deserialize(database_result)
 
-    def set_curation(self, god_rolls: GodRollContainer):
-        if self.perk['hash'] in god_rolls.get_rolls('PVP'):
-            self.curation += GameModeFlag.pvp
-        if self.perk['hash'] in god_rolls.get_rolls('PVE'):
-            self.curation += GameModeFlag.pve
+        self.curation = GameModeFlag.empty
+        self.hash = str(perk['hash'])
+        self.name = perk['displayProperties']['name']
+        self.icon_url = perk['displayProperties']['icon']
+        self.item_type = perk['itemTypeDisplayName']
+
+    def set_curation(self, gamemode: GameModeFlag):
+        """
+        Updates curation to either pvp, pve or both.
+
+        :param gamemode: game mode for which the perk was curated
+        """
+        self.curation += gamemode
 
     def get_hash(self) -> str:
-        return str(self.perk['hash'])
+        """
+        :return: hash value as String
+        """
+        return self.hash
 
     def get_name(self) -> str:
-        return self.perk['displayProperties']['name']
+        """
+        :return: perk name as String
+        """
+        return self.name
 
     def get_icon_url(self) -> str:
-        return self.perk['displayProperties']['icon']
+        """
+        gets perk icon url; requires bungie.net base url
+
+        :return: url for perk icon jpg image as String
+        """
+        return self.icon_url
 
     def is_enhanced(self) -> bool:
-        return self.perk['itemTypeDisplayName'] == ENHANCED_PERK
+        """
+        :return: True if perk is enhanced, False if it is not
+        """
+        return self.item_type == ENHANCED_PERK
 
 
 class DamageType(ManifestData):
-    damage_type: dict[Union[str, dict[str, str]], Union[dict[str, str], str]]
+    """
+    Contains relevant information of damage types DamageTypeDefinition's database entry.
+    """
+    icon_url: str
 
-    def __init__(self, json_string):
-        self.damage_type = self.deserialize(json_string=json_string)
+    def __init__(self, database_result):
+        damage_type = self.deserialize(json_string=database_result)
+        self.icon_url = damage_type['displayProperties']['icon']
 
     def get_icon(self) -> str:
-        return self.damage_type['displayProperties']['icon']
+        """
+        gets damage type icon url; requires bungie.net base url
+
+        :return: url for damage type icon image as String
+        """
+        return self.icon_url
 
 
 class GodRollContainer(ManifestData):
-    god_rolls: dict[str, list[list[int]]]
+    """Contains a weapon's pvp and pve recommendations"""
+    pvp_rolls: list[list[int]]
+    pve_rolls: list[list[int]]
+    weapon_hash: str
 
-    def __init__(self, json_string):
-        self.god_rolls = self.deserialize(json_string=json_string)
+    def __init__(self, database_result):
+        god_rolls = self.deserialize(json_string=database_result)
 
-    def get_rolls(self, game_mode: str) -> list[list[int]]:
-        return self.god_rolls[game_mode]
+        self.pvp_rolls = god_rolls['PVP']
+        self.pve_rolls = god_rolls['PVE']
+        self.weapon_hash = str(god_rolls['hash'])
 
     def apply_to_perk_set(self, perk_set: list[PerkColumn]):
-        iter_len: int = len(self.god_rolls['PVP'])
+        """
+        Takes a weapon's Perks and updates their curation status according to the information
+        stored in the GodRollContainer in O(n^2)
+
+        :param perk_set: weapon's Perks
+        """
+        iter_len: int = len(self.pvp_rolls)
         if len(perk_set) < iter_len:
             iter_len = len(perk_set)
 
         for i in range(iter_len):
             for perk in perk_set[i]:
-                if perk.get_hash() in self.god_rolls['PVP'][i]:
-                    perk.curation += GameModeFlag.pvp
-                if perk.get_hash() in self.god_rolls['PVE'][i]:
-                    perk.curation += GameModeFlag.pve
+                if perk.get_hash() in self.pvp_rolls[i]:
+                    perk.set_curation(GameModeFlag.pvp)
+                if perk.get_hash() in self.pve_rolls[i]:
+                    perk.set_curation(GameModeFlag.pve)

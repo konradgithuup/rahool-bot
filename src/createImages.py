@@ -17,6 +17,12 @@ curation_color = {
 
 
 def create_perk_image(weapon: Weapon, perk_set: list[PerkColumn]) -> str:
+    """
+    creates image with weapon information
+
+    :param weapon: the weapon for which to create the image
+    :param perk_set: the weapon's perk_set
+    """
     # open/create required images
     urllib.request.urlretrieve(f'https://bungie.net{weapon.get_screenshot()}',
                                f'{weapon.get_collectible_hash()}.png')
@@ -62,31 +68,15 @@ def create_perk_image(weapon: Weapon, perk_set: list[PerkColumn]) -> str:
     return weapon.get_collectible_hash()
 
 
-def create_god_roll_image(weapon: Weapon, perk_set: list[PerkColumn], game_mode: str) -> str:
-    background = Image.open(f"resources/image_assets/{game_mode.lower()}.jpg")
-
-    # open required fonts
-    title = ImageFont.truetype('resources/fonts/FUTURA.ttf', 100)
-    base_text = ImageFont.truetype('resources/fonts/futur.ttf', 40)
-
-    overlay = Image.new('RGBA', (1920, 1080), (0, 0, 0, 96))
-    overlay_edit = ImageDraw.Draw(overlay)
-    overlay_edit.text((130, 15),
-                      weapon.get_name(),
-                      (255, 255, 255),
-                      title)
-
-    draw_perks(overlay, weapon, perk_set, base_text)
-
-    enhance = ImageEnhance.Brightness(overlay)
-    mask = enhance.enhance(0.3)
-    background.paste(overlay, (0, 0), mask)
-    background.save(f"{weapon.get_hash()}.png")
-
-    return weapon.get_hash()
-
-
 def draw_perks(overlay: Image, weapon: Weapon, perk_set: list[PerkColumn], base_text: ImageFont):
+    """
+    adds perks to the image
+
+    :param overlay: layer to draw on
+    :param weapon: weapon for which to draw perks
+    :param perk_set: perks to draw
+    :param base_text: font for perk names
+    """
     overlay_edit = ImageDraw.Draw(overlay)
     disclaimer = ""
 

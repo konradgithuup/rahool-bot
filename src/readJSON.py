@@ -1,15 +1,23 @@
 import logging
 import threading
-from helperClasses import Weapon, SocketSet, PlugSet, PerkColumn, DamageType, GodRollContainer
+from helperClasses import Weapon, SocketSet, PlugSet, PerkColumn, DamageType
 from customExceptions import NoRandomRollsError
 from typing import Optional
 
 ITEM_TYPE_WEAPON = 3
 
 
-# run queries for each perk column on an individual thread to speed up the process
 class ColumnThread(threading.Thread):
+    """
+    threading class for parallelized perk queries
+    """
     def __init__(self, thread_id, name, column, out):
+        """
+        :param thread_id: ID of the thread
+        :param name: name of the thread
+        :param column: perk hashes to query
+        :param out: list of Perks to write results to
+        """
         threading.Thread.__init__(self)
         self.thread_id: int = thread_id
         self.name: str = name
@@ -24,13 +32,23 @@ class ColumnThread(threading.Thread):
         logging.info(f"Exiting {self.name}")
 
 
-# search database output for random rolled weapon
 def find_weapon(weapon_db: list[list[str]]) -> Weapon:
+    """
+    recursively filter database weapon query for random rolled weapon
+
+    :param weapon_db: database query result
+    :return: random rolled weapon
+    :raises NoRandomRollsError: when database query doesn't contain a random rolled weapon
+    """
     if len(weapon_db) == 0:
         raise NoRandomRollsError
 
     weapon_string: list[str] = weapon_db[0]
-    weapon: Weapon = Weapon(json_string=weapon_string[0])
+    try:
+        weapon: Weapon = Weapon(json_string=weapon_string[0])
+    except KeyError:
+        weapon_db.pop(0)
+        return find_weapon(weapon_db)
 
     if weapon.get_item_type() != ITEM_TYPE_WEAPON:
         weapon_db.pop(0)
@@ -43,38 +61,49 @@ def find_weapon(weapon_db: list[list[str]]) -> Weapon:
     return find_weapon(weapon_db)
 
 
-def get_damage_type_link(dmg_type_string: str) -> str:
+def get_damage_type_icon_url(dmg_type_string: str) -> str:
+    """
+    get icon url for a damage type
+
+    :param dmg_type_string: damage type data as json-formatted String
+    :return: damage type icon url, requires bungie.net base url
+    """
     damage_type: DamageType = DamageType(dmg_type_string)
     return damage_type.get_icon()
 
 
-# prepare the weapon dictionary to get plug hashes
-async def get_weapon_plug_hashes(weapon: Weapon) -> list[PerkColumn]:
-    from readDB import query_plug_set
-    perk_socket_set: SocketSet = SocketSet(weapon)
-    plug_sets: list[str] = []
-    i: int = 1
-    perk_sockets = perk_socket_set.get_perk_sockets()
+async def get_weapon_plug_hashes(perk_socket_set: SocketSet) -> list[PerkColumn]:
+    """
+    get perks for all random and origin perk sockets
 
-    # get plug hash for all columns that store randomized weapon perks
-    while i < perk_sockets[len(perk_sockets)-1]:
+    :param perk_socket_set: weapon's perk sockets
+    :return: weapon perks as List of PerkColumn
+    """
+    from readDB import query_plug_set
+    plug_sets: list[PlugSet] = []
+    i: int = 1
+
+    while i < perk_socket_set.get_size():
 
         if perk_socket_set.is_random_socket(index=i) or perk_socket_set.is_origin_socket(index=i):
             plug_set: int = perk_socket_set.get_plug_set_hash(index=i)
-            plug_sets.append(query_plug_set(plug_set))
+            plug_sets.append(PlugSet(query_plug_set(plug_set)))
         i += 1
 
     return await get_plug_set_perk_hashes(plug_sets)
 
 
-# retrieve each plug sets perks
-async def get_plug_set_perk_hashes(plug_sets: list[str]) -> list[PerkColumn]:
-    # store all perk hashes
+async def get_plug_set_perk_hashes(plug_sets: list[PlugSet]) -> list[PerkColumn]:
+    """
+    get perks from plug sets
+
+    :param plug_sets:
+    :return:
+    """
+
     total_perk_hashes: list[list[int]] = []
-    for plug_string in plug_sets:
-        plug: PlugSet = PlugSet(plug_string)
-        # retrieve perk hashes of column i
-        column: list[int] = plug.get_perk_hashes()
+    for plug_set in plug_sets:
+        column: list[int] = plug_set.get_perk_hashes()
 
         total_perk_hashes.append(column)
 
@@ -94,6 +123,11 @@ def perk_set_from_hashes(column: list[int]) -> PerkColumn:
 
 # handle multithreaded db lookup for weapon-perks
 async def get_perks(perk_hashes: list[list[int]]) -> list[PerkColumn]:
+    """
+    gets perk data from set of perk hash lists running each column on a different thread
+    :param perk_hashes:
+    :return: perk data ordered by column as List of PerkColumn
+    """
     total_perks: list[Optional[PerkColumn]] = []
 
     i: int = 0
